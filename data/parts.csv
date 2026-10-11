@@ -1,0 +1,47 @@
+part_no,description,rev,lifecycle,make_buy,material,mass_kg,unit_cost_inr,supplier,stock_chakan
+E3-0000,Electric cargo three-wheeler,C,released,make,,990,0,,0
+E3-1000,Chassis assembly,C,released,make,,182,0,,0
+E3-1100,Main frame weldment,D,released,make,Steel S355,64.0,14200,,300
+E3-1110,Frame long member,C,released,make,Steel S355,18.5,3100,,300
+E3-1120,Frame cross member,D,released,make,Steel S355,3.2,640,,3100
+E3-1130,Mounting bracket,B,released,make,Steel S355,0.45,95,,300
+E3-1200,Front suspension,B,released,make,,14.0,0,,0
+E3-1210,Front fork,B,released,buy,,9.8,5200,Deccan Forge,300
+E3-1220,Shock absorber,A,released,buy,,2.1,1850,RideTech,300
+E3-1300,Rear axle assembly,C,released,make,,48.0,0,,0
+E3-1310,Axle beam,C,released,make,Steel EN19,31.0,8800,,300
+E3-1320,Leaf spring,B,released,buy,Spring steel,8.4,2300,Pune Springs,300
+E3-1400,Wheel assembly,B,released,make,,11.5,0,,0
+E3-1410,Rim,A,released,buy,Steel,5.2,1450,Chakan Wheels,300
+E3-1420,Tyre,A,released,buy,Rubber,6.3,2200,Kaveri Tyres,300
+E3-2000,Powertrain assembly,C,released,make,,58.0,0,,0
+E3-2100,Traction motor,B,released,buy,,24.0,38500,Volta Drives,300
+E3-2200,Motor controller,C,released,buy,,4.1,21000,Volta Drives,300
+E3-2300,Differential,A,released,buy,,17.0,12400,GearCraft,300
+E3-2400,Motor mount bracket,B,released,make,"Steel S355, 5 mm",1.9,420,,1150
+E3-2401,"Motor mount bracket, 6 mm",A,in work,make,"Steel S355, 6 mm",2.1,470,,0
+E3-3000,Battery pack assembly,D,released,make,,62.0,0,,0
+E3-3100,Cell module,C,released,make,,10.5,0,,0
+E3-3110,Li-ion cell 21700,D,released,buy,NMC,0.07,310,CellCo; VoltCell,52000
+E3-3200,Battery management board,C,released,buy,,0.6,9800,Volta Drives,300
+E3-3300,Battery enclosure,B,released,make,Aluminium 6061,9.5,7400,,300
+E3-3400,Busbar,A,released,buy,Copper,0.12,260,Nashik Electricals,300
+E3-4000,Cabin assembly,B,released,make,,71.0,0,,0
+E3-4100,Cabin shell,B,released,make,Steel,46.0,11800,,300
+E3-4200,Windshield glass,A,released,buy,Laminated glass,7.5,3400,ClearView Glass,420
+E3-4300,Driver seat,A,released,buy,,9.0,2900,SeatCo,300
+E3-4400,Dashboard assembly,B,released,make,,4.2,0,,0
+E3-4410,Instrument cluster,B,released,buy,,0.8,4100,Volta Drives,300
+E3-5000,Cargo body assembly,B,released,make,,88.0,0,,0
+E3-5100,Cargo floor panel,B,released,make,Steel,34.0,4900,,610
+E3-5200,Cargo side panel,B,released,make,Steel,14.0,2100,,300
+E3-5300,Tail gate,A,released,make,Steel,12.0,1900,,300
+E3-5400,Hinge,A,released,buy,Steel,0.5,120,Pune Hardware,300
+E3-6000,Electrical harness kit,C,released,make,,7.8,0,,0
+E3-6100,Main wiring harness,C,released,buy,,3.9,6200,Nashik Electricals,300
+E3-6200,Lighting harness,D,released,buy,,1.4,1800,Nashik Electricals,950
+E3-6300,Headlamp,A,released,buy,,0.9,1250,Shivneri Lighting,2400
+E3-6400,Tail lamp,A,released,buy,,0.4,560,Shivneri Lighting,1900
+E3-9001,Bolt M10x40,A,released,buy,Steel 8.8,0.04,9,Pune Hardware,18000
+E3-9002,Nut M10,A,released,buy,Steel 8,0.01,3,Pune Hardware,21000
+E3-9003,Bolt M10x45,A,in work,buy,Steel 8.8,0.045,10,Pune Hardware,0

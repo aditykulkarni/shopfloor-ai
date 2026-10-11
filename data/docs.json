@@ -1,0 +1,146 @@
+[
+ {
+  "id": "SPEC-E3-001",
+  "title": "E3 cargo three-wheeler: product specification",
+  "type": "specification",
+  "rev": "C",
+  "status": "released",
+  "date": "2026-01-20",
+  "text": "The E3 is Sahyadri Motors' electric cargo three-wheeler for urban logistics. It is built at the Chakan plant, at about 1,500 vehicles a month; the Hosur plant builds battery packs and cell modules.\n\nKey figures: rated payload 500 kg, gross vehicle weight 990 kg, top speed 50 km/h, certified range 120 km per charge on the city cycle. The traction motor is a 7 kW peak permanent-magnet motor driving the rear axle through a single-speed differential. The battery pack holds four cell modules of 24 cylindrical 21700 lithium-ion cells each, 96 cells in total, in a sealed enclosure rated IP67.\n\nThe vehicle is homologated through ARAI. Any change to the battery, braking, lighting or structure that affects homologation is a Class A change under SOP-ECM-001 and must be reviewed with the homologation team before release.\n\nDesign life is 7 years or 150,000 km. Warranty is 3 years or 80,000 km on the vehicle and 5 years or 100,000 km on the battery pack."
+ },
+ {
+  "id": "DS-FAST-001",
+  "title": "Fastener torque standard",
+  "type": "design standard",
+  "rev": "C",
+  "status": "released",
+  "date": "2026-03-02",
+  "text": "This standard sets tightening torques for threaded fasteners on the E3 platform. It replaces revision B. All values are for zinc-flake coated property class 8.8 bolts with a lightly oiled thread, tightened with a calibrated torque wrench.\n\nMain frame joints, M10 (bolt E3-9001 with nut E3-9002): 45 Nm plus or minus 3 Nm.\nMotor mount bracket to frame, M10: 50 Nm plus or minus 3 Nm, with medium-strength thread locker (C-0101) applied to the bolt thread.\nBattery enclosure lid, M8: 22 Nm plus or minus 2 Nm.\nBusbar terminals, M6: 9 Nm plus or minus 1 Nm, followed by a torque stripe.\nRear axle U-bolts, M12: 60 Nm plus or minus 4 Nm, tightened in a cross pattern in two passes.\n\nTorque wrenches must be calibrated at least every 6 months. After the 50 km end-of-line test drive, a 10% sample of main frame and motor mount joints is re-checked; any joint below the lower limit stops the line and is escalated to the quality head.\n\nChange from revision B: the main frame M10 torque was raised from 40 Nm to 45 Nm after joint-slip findings in durability testing."
+ },
+ {
+  "id": "DS-FAST-001-B",
+  "title": "Fastener torque standard (revision B, superseded)",
+  "type": "design standard",
+  "rev": "B",
+  "status": "superseded",
+  "date": "2024-06-10",
+  "text": "This standard sets tightening torques for threaded fasteners on the E3 platform.\n\nMain frame joints, M10: 40 Nm plus or minus 3 Nm.\nMotor mount bracket to frame, M10: 50 Nm plus or minus 3 Nm.\nBattery enclosure lid, M8: 22 Nm plus or minus 2 Nm.\nBusbar terminals, M6: 9 Nm plus or minus 1 Nm.\nRear axle U-bolts, M12: 60 Nm plus or minus 4 Nm.\n\nTorque wrenches must be calibrated at least every 12 months."
+ },
+ {
+  "id": "WI-ASM-012",
+  "title": "Work instruction: fit rear axle to main frame",
+  "type": "work instruction",
+  "rev": "D",
+  "status": "released",
+  "date": "2026-03-15",
+  "text": "Station: chassis line, station 4, Chakan. Takt time 6 minutes. Operators: 2.\n\nParts: main frame weldment E3-1100, rear axle assembly E3-1300, leaf springs E3-1320 (2), U-bolt kit from fastener kit M-KIT-01.\n\nStep 1. Check the frame weldment carries a green weld inspection tag. Do not fit an axle to an untagged frame.\nStep 2. Lift the axle with the station hoist and locate the leaf spring centre bolts in the frame pockets.\nStep 3. Fit the U-bolts hand-tight. Tighten in a cross pattern in two passes to the torque in DS-FAST-001 (currently 60 Nm for M12 U-bolts).\nStep 4. Apply a yellow torque stripe across each nut and thread.\nStep 5. Record the torque wrench ID in the traveller. The wrench must show a calibration label within the last 6 months.\n\nQuality checks: axle square to the frame centre line within 2 mm, measured with the station jig. Any deviation goes to the line leader before the frame moves on.\n\nSafety: wear safety shoes and gloves; never stand under a suspended axle."
+ },
+ {
+  "id": "WI-BAT-004",
+  "title": "Work instruction: install battery pack",
+  "type": "work instruction",
+  "rev": "B",
+  "status": "released",
+  "date": "2025-11-04",
+  "text": "Station: final assembly, station 9, Chakan. Only operators trained and authorised for high-voltage work may perform this task.\n\nPPE: class 0 insulating gloves (tested within the last 6 months), face shield, insulated tools.\n\nStep 1. Verify the battery pack serial number against the vehicle traveller.\nStep 2. Measure insulation resistance between each high-voltage terminal and the enclosure at 500 V DC. Minimum acceptable value is 100 megaohms. Reject the pack if any reading is lower and quarantine it with a red tag.\nStep 3. Lower the pack into the cradle and fit the enclosure mounting bolts.\nStep 4. Connect the busbars and tighten M6 terminals to 9 Nm per DS-FAST-001; apply a torque stripe.\nStep 5. Replace the enclosure lid gasket every time the lid is opened. Never reuse a gasket. Tighten the M8 lid bolts to 22 Nm in a cross pattern.\nStep 6. Run the battery management board self-test from the end-of-line tester and record the result.\n\nA loose busbar joint can overheat; see FMEA-E3-BAT for the controls."
+ },
+ {
+  "id": "DS-WELD-002",
+  "title": "Weld quality standard for frame weldments",
+  "type": "design standard",
+  "rev": "A",
+  "status": "released",
+  "date": "2025-08-21",
+  "text": "Applies to the main frame weldment E3-1100 and all welded brackets on the E3 platform.\n\nProcess: MIG welding with ER70S-6 wire, 1.0 mm, with argon and CO2 shielding gas (82/18).\n\nAcceptance criteria: cracks of any size are not permitted. Visible surface porosity: no single pore larger than 1 mm, and no more than 3 pores in any 100 mm of weld. Undercut no deeper than 0.5 mm. Weld leg length at least the design value shown on the drawing.\n\nInspection: 100% visual inspection of every frame by a certified inspector, who applies a green tag when the frame passes. In addition, one frame per shift is cut for macro-etch examination of penetration. Results are recorded in the weld quality log.\n\nFrames that fail are tagged red and sent to the repair bay; a repaired weld must be re-inspected by a different inspector."
+ },
+ {
+  "id": "DS-COAT-003",
+  "title": "Paint and corrosion protection standard",
+  "type": "design standard",
+  "rev": "B",
+  "status": "released",
+  "date": "2025-05-30",
+  "text": "Applies to the frame, cargo body panels and cabin shell.\n\nProcess sequence: degrease, phosphate, cathodic electro-deposition (CED) primer of 20 to 25 micrometres, then polyester powder top coat of 60 to 80 micrometres. Frames are coated after welding and before assembly.\n\nRequirements: neutral salt spray test of 500 hours with no red rust and creep from scribe below 2 mm. Cross-hatch adhesion class 0 or 1. Film thickness checked on 5 points per part, one part per hour.\n\nMasking: threaded holes and earth points must be masked before CED so that electrical earth continuity is preserved."
+ },
+ {
+  "id": "SOP-ECM-001",
+  "title": "Engineering change management procedure",
+  "type": "procedure",
+  "rev": "E",
+  "status": "released",
+  "date": "2026-02-12",
+  "text": "Purpose: control every change to released parts, drawings, BOMs and documents of the E3 platform.\n\nFlow: anyone may raise an engineering change request (ECR). Design engineering assesses technical feasibility. Manufacturing engineering completes the impact analysis within 5 working days, covering affected parts and assemblies (where-used), plants, open orders and stock, tooling, work instructions and suppliers. The change control board (CCB) meets every Thursday and decides. An approved change is released as an engineering change notice (ECN) with an effectivity date or vehicle serial number.\n\nChange classes:\nClass A: affects safety, homologation, regulatory compliance, or form, fit or function seen by the customer. Requires CCB approval and sign-off by the CTO, and homologation review.\nClass B: affects form, fit or function internally, cost, or a supplier. Requires CCB approval.\nClass C: documentation only, no effect on the physical part. Approved by the design lead.\n\nInterchangeability rule: if the new part is not interchangeable with the old one in every use, it must get a new part number. If it is fully interchangeable, the revision letter is incremented.\n\nStock disposition must be stated on every ECN: use as is, rework, or scrap. Suppliers must receive released ECNs within 2 working days."
+ },
+ {
+  "id": "QM-SUP-003",
+  "title": "Supplier quality manual",
+  "type": "procedure",
+  "rev": "D",
+  "status": "released",
+  "date": "2025-12-01",
+  "text": "Applies to all suppliers of production parts to Sahyadri Motors.\n\nNew parts and changed parts require a production part approval process (PPAP) submission. Level 3 is the default. Safety-critical parts, including cells, battery management boards, brake parts and steering parts, require level 3 plus a run-at-rate audit at the supplier's site.\n\nSuppliers must notify Sahyadri at least 90 days before any change of process, material, sub-supplier or manufacturing location. No change may ship before PPAP approval.\n\nWhen a non-conformance is raised, the supplier must contain suspect stock within 24 hours, submit root cause analysis within 10 working days, and close the corrective action with an 8D report within 30 days.\n\nIncoming inspection: cells are sampled per lot for open-circuit voltage and internal resistance; any lot with more than 0.1% out of tolerance is rejected in full."
+ },
+ {
+  "id": "ECN-2026-0131",
+  "title": "ECN: second source for Li-ion cell E3-3110",
+  "type": "change notice",
+  "rev": "-",
+  "status": "released",
+  "date": "2026-07-14",
+  "text": "Change: approve VoltCell as a second source for the 21700 Li-ion cell E3-3110, alongside the current supplier CellCo. Reason: supply risk; CellCo lead time has grown to 22 weeks.\n\nClass: A (battery, safety and homologation). Approved by the CCB on 2026-07-09 and by the CTO on 2026-07-11. Homologation team confirmed no re-certification is needed because cell chemistry, format and pack configuration are unchanged.\n\nAffected parts: E3-3110 (revision C to D, interchangeable, so the part number is unchanged), cell module E3-3100 (no change to drawing). Affected documents: approved supplier list, incoming inspection plan.\n\nValidation: thermal and cycle test report TR-2026-012, passed. PPAP level 3 with run-at-rate audit completed at VoltCell.\n\nEffectivity: Hosur plant, from cell module lot 26-M-0450. Stock disposition: use as is (both sources may be used, but never mixed within one module)."
+ },
+ {
+  "id": "ECN-2026-0139",
+  "title": "ECN: thicker motor mount bracket",
+  "type": "change notice",
+  "rev": "-",
+  "status": "in review",
+  "date": "2026-09-03",
+  "text": "Change: increase the motor mount bracket plate thickness from 5 mm to 6 mm. Reason: three warranty claims for fatigue cracks at the bracket bend, all on vehicles used above rated payload on rough roads.\n\nClass: B. Status: impact analysis complete, waiting for the CCB on 2026-09-17.\n\nAffected parts: motor mount bracket E3-2400 is replaced by new part E3-2401. The new bracket is not interchangeable, because the thicker plate needs longer bolts, so a new part number is required. Linked change: ECN-2026-0147 replaces the bolts.\n\nImpact found so far: bracket press tool needs new strip layout (tool cost 3.2 lakh rupees); mass increase 0.4 kg per vehicle; work instruction for motor fitting to be updated. 1,150 brackets E3-2400 in stock at Chakan.\n\nProposed stock disposition: scrap the remaining E3-2400 stock at effectivity. Quality rejected a proposal to use it on low-payload vehicles, because duty cannot be controlled after sale."
+ },
+ {
+  "id": "ECN-2026-0147",
+  "title": "ECN: longer bolts for motor mount",
+  "type": "change notice",
+  "rev": "-",
+  "status": "draft",
+  "date": "2026-09-08",
+  "text": "Change: replace bolt M10x40 (E3-9001) with bolt M10x45 (new part E3-9003) at the motor mount bracket joints only. Main frame joints keep E3-9001.\n\nReason: the 6 mm motor mount bracket from ECN-2026-0139 needs a longer bolt to keep full thread engagement.\n\nClass: B. Status: draft, to be reviewed together with ECN-2026-0139.\n\nAffected: powertrain assembly E3-2000 (8 bolts per vehicle change from E3-9001 to E3-9003). E3-9001 remains in use on the main frame E3-1100, so it is not obsoleted. The fastener kit M-KIT-01 contents must be updated. Torque stays at 50 Nm per DS-FAST-001.\n\nOpen point: the supplier of E3-9001 also quotes E3-9003; PPAP level 3 required."
+ },
+ {
+  "id": "TR-2026-012",
+  "title": "Test report: VoltCell 21700 cell qualification",
+  "type": "test report",
+  "rev": "-",
+  "status": "released",
+  "date": "2026-06-28",
+  "text": "Purpose: qualify VoltCell 21700 cells for the E3 battery pack as a second source.\n\nTests and results:\nThermal: full pack discharge at 1C in 45 degrees C ambient. Maximum cell temperature 52 degrees C against a limit of 60 degrees C. Pass.\nCycle life: 500 cycles at 25 degrees C, capacity retention 96.8% against a requirement of at least 95%. Pass.\nInternal resistance spread within one module: 1.9 milliohms against a limit of 3 milliohms. Pass.\nNail penetration and crush: per AIS-156 requirements, no fire, no explosion. Pass.\n\nConclusion: VoltCell cells meet all requirements. Mixing VoltCell and CellCo cells within one module is not recommended because their internal resistance curves differ with age."
+ },
+ {
+  "id": "FMEA-E3-BAT",
+  "title": "Process FMEA extract: battery pack assembly",
+  "type": "FMEA",
+  "rev": "F",
+  "status": "released",
+  "date": "2026-01-08",
+  "text": "Failure mode 1: busbar joint under-torqued. Effect: high contact resistance, local overheating, possible thermal event. Severity 9, occurrence 3, detection 4, RPN 108. Controls: torque-controlled nutrunner with recorded torque, torque stripe, thermal imaging of every pack during end-of-line discharge test. Action owner: Hosur manufacturing engineering.\n\nFailure mode 2: enclosure gasket reused or damaged. Effect: water ingress, insulation failure. Severity 8, occurrence 4, detection 5, RPN 160. Controls: gasket replaced on every opening (WI-BAT-004), IP67 leak test on 100% of packs. Recommended action: add gasket presence sensor at lid station, due 2026-12.\n\nFailure mode 3: wrong cell lot mixed in one module. Effect: imbalance, reduced life. Severity 6, occurrence 2, detection 3, RPN 36. Controls: lot scan at module build station; system blocks mixing."
+ },
+ {
+  "id": "MAINT-PRS-007",
+  "title": "Maintenance plan: 400 tonne press line, Chakan",
+  "type": "maintenance plan",
+  "rev": "C",
+  "status": "released",
+  "date": "2025-10-10",
+  "text": "Equipment: 400 tonne mechanical press, line P2, which stamps frame cross members and brackets, including motor mount brackets.\n\nDaily: check lubrication levels, clutch air pressure, and the die clamp indicators.\nWeekly: inspect the brake lining wear and clean the bolster.\nMonthly: check ram parallelism, maximum deviation 0.1 mm over the bolster.\nEvery 4,000 operating hours: change the hydraulic overload oil and replace filters.\n\nCondition monitoring: main motor bearing vibration is monitored online. Warning at 4.5 mm/s RMS, alarm at 7.1 mm/s RMS. On alarm, the maintenance manager decides within one shift whether to stop the press.\n\nSpare parts held: clutch friction plates, overload valve, main motor bearing set."
+ },
+ {
+  "id": "LL-2025-04",
+  "title": "Lessons learned: harness chafing on frame cross member",
+  "type": "lessons learned",
+  "rev": "-",
+  "status": "released",
+  "date": "2025-04-22",
+  "text": "Problem: 41 warranty claims in 2024 for intermittent lighting faults. Root cause: the lighting harness E3-6200 rubbed against a sharp edge of the frame cross member E3-1120, wearing through the insulation after about 15,000 km.\n\nWhy it was missed: the harness route was only shown in the 3D model and not checked on a physical vehicle before launch; the cross member edge was within drawing tolerance but not deburred.\n\nFix: grommet added at the cross member pass-through, harness clips at a maximum spacing of 150 mm, and the cross member edge deburred. Implemented through ECN-2025-0088.\n\nLesson: for every new harness route, run a physical routing check on a prototype and add clip spacing to the work instruction."
+ }
+]

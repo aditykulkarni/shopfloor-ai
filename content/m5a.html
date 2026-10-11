@@ -1,0 +1,525 @@
+<section data-week="18" data-title="What MCP is and why it matters" data-goal="Explain the Model Context Protocol to engineers and executives, and build and inspect your first MCP server over PLM data.">
+
+<article data-id="m5w18d1" data-type="lesson" data-title="One protocol between AI and every system" data-mins="80" data-watch="Model Context Protocol explained; MCP introduction Anthropic" data-read="modelcontextprotocol.io, introduction and architecture overview">
+<p class="lede">In Part 4 your agent called Python functions you imported. That works for one agent and one data set. A company has many AI applications and many systems. The Model Context Protocol (MCP) is the open standard for connecting the two, and it is quickly becoming how enterprise software is made usable by AI.</p>
+<h3>The integration problem</h3>
+<p>Suppose a company has 4 AI applications (a chat assistant, a coding assistant, a document copilot and a change agent) and 5 systems (PLM, ERP, MES, document management, quality). Connecting each application to each system means up to 4 × 5 = 20 custom integrations, each built and maintained separately. Add one application and you build 5 more.</p>
+<p>MCP turns this into 4 + 5: each system gets one <strong>MCP server</strong>, each application includes an <strong>MCP client</strong>, and any client can use any server. It is often compared to USB: one standard port instead of a different cable for every device.</p>
+<h3>The parts</h3>
+<table class="stmt">
+<thead><tr><th>Part</th><th>What it is</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td>Host</td><td>The AI application the user works in</td><td>Claude Desktop, an IDE, your own Streamlit app or agent</td></tr>
+<tr><td>Client</td><td>The connector inside the host; one per server</td><td>The code in your agent that talks to the BOM server</td></tr>
+<tr><td>Server</td><td>A program that exposes a system's capabilities in the MCP format</td><td>Your <code>bom_server.py</code> over the part master and BOM</td></tr>
+</tbody>
+</table>
+<h3>What a server offers: three primitives</h3>
+<ul>
+<li><strong>Tools</strong>: functions the model can call, such as <code>where_used</code>. Exactly what you built in Part 4, now with a standard description format. Tools carry <em>annotations</em> such as "read only" or "destructive", which hosts use to decide when to ask the user for approval.</li>
+<li><strong>Resources</strong>: data the application can read and put in context, addressed by a URI such as <code>plm://parts/E3-2400</code> or <code>doc://DS-FAST-001</code>. Resources are usually chosen by the application or user, while tools are chosen by the model.</li>
+<li><strong>Prompts</strong>: reusable templates the server offers to users, such as "impact review for change X". They package a company's best way of doing a task.</li>
+</ul>
+<p>The protocol also lets servers ask the host for things: <em>elicitation</em> (ask the user a question, for example to confirm an action) and <em>sampling</em> (ask the host's model to generate text). You will meet them, but tools, resources and prompts are what matter most.</p>
+<h3>How they talk</h3>
+<p>Messages are JSON-RPC: small JSON requests and responses such as <code>tools/list</code> and <code>tools/call</code>. Two transports carry them:</p>
+<ul>
+<li><strong>stdio</strong>: the host starts the server as a local program and talks through its standard input and output. Simple, local, ideal for development and desktop tools.</li>
+<li><strong>Streamable HTTP</strong>: the server runs as a web service that many users and hosts reach over the network. This is how enterprise servers are deployed, with authentication (OAuth) in front.</li>
+</ul>
+<h3>Why it matters to you</h3>
+<p>MCP was published by Anthropic in late 2024 and has since been adopted widely across AI vendors, developer tools and enterprise software, and is now governed as an open project. For PLM and manufacturing this changes the question customers ask. It is no longer only "which AI does your platform have?" but also "can the AI tools we already chose use our engineering data, safely?" An MCP server over PLM data, with the platform's access rights and lifecycle rules enforced inside it, is an answer to that question.</p>
+<h3>What MCP does not do</h3>
+<p>MCP is plumbing. It does not make a model accurate, it does not decide which actions are safe, and it does not secure a badly designed server. Everything from Part 4 still applies: good tool design, gates for writes, least privilege and logs. Unit 21 covers MCP's own security issues.</p>
+<div class="callout"><h4>In your job</h4><p>Explain MCP to an executive in one sentence: "It is a standard way to let any approved AI assistant use your engineering systems through controlled, logged doors, instead of building a custom integration for every tool." Then ask which AI tools their company has already approved; MCP is how your platform's data reaches those tools.</p></div>
+<div class="quiz">
+<div class="q" data-a="c"><p>A company has 6 AI applications and 8 systems. With MCP, roughly how many components are needed?</p><ol><li data-o="a">48 integrations</li><li data-o="b">6</li><li data-o="c">6 clients and 8 servers, 14 in total</li></ol><p class="why">N × M becomes N + M.</p></div>
+<div class="q" data-a="a"><p>Which MCP primitive is typically chosen by the model during a task?</p><ol><li data-o="a">Tools</li><li data-o="b">Resources</li><li data-o="c">Prompts</li></ol><p class="why">Resources and prompts are usually chosen by the application or user.</p></div>
+<div class="q" data-a="b"><p>Which transport suits a PLM server shared by 500 users?</p><ol><li data-o="a">stdio on each laptop</li><li data-o="b">Streamable HTTP with authentication</li><li data-o="c">Email</li></ol><p class="why">Networked, authenticated, centrally run.</p></div>
+</div>
+</article>
+
+<article data-id="m5w18d2" data-type="lab" data-title="Lab: your first MCP server" data-mins="110" data-watch="build MCP server python tutorial; MCP inspector demo" data-read="MCP Python SDK README on GitHub (version 2 and later); modelcontextprotocol.io, build a server">
+<p class="lede">You will wrap three of your Part 4 tools in an MCP server, inspect it with the official MCP Inspector, and call it from a Python client. From here on, use your laptop: MCP servers are local programs, and Colab is awkward for them.</p>
+<h3>Step 1: setup</h3>
+<p>Create a folder <code>p5-mcp</code> and copy in <code>plmtools.py</code>, <code>docindex.py</code>, the three CSV files and <code>docs.json</code>. Then install the SDK. You also need Node.js (free from nodejs.org) for the Inspector.</p>
+<pre><code>pip install "mcp&gt;=2"</code></pre>
+<p>Version 2 of the Python SDK renamed the main class from <code>FastMCP</code> to <code>MCPServer</code>. Many tutorials online still show version 1 code (<code>from mcp.server.fastmcp import FastMCP</code>); the ideas are the same, but use the version 2 names in this course.</p>
+<h3>Step 2: the server</h3>
+<pre><code>%%writefile bom_server.py
+"""MCP server: read-only access to the Sahyadri part master and E3 BOM."""
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))   # find the CSV files wherever the host starts us
+
+from typing import Annotated
+from pydantic import Field
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
+import plmtools
+
+mcp = MCPServer("sahyadri-bom",
+                instructions="Read-only access to the Sahyadri E3 part master and engineering BOM.")
+READ_ONLY = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+PartNo = Annotated[str, Field(description="Part number, for example E3-2400")]
+
+
+@mcp.tool(annotations=READ_ONLY)
+def search_parts(text: Annotated[str, Field(description="Words from the part description")]) -> list[dict]:
+    """Find part numbers from a description such as 'windshield glass'. Use first when no number is given."""
+    return plmtools.search_parts(text)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def get_part(part_no: PartNo) -> dict:
+    """Part master record: revision, lifecycle, make or buy, material, mass, cost, supplier, stock."""
+    return plmtools.get_part(part_no)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def where_used(part_no: PartNo) -> list[dict]:
+    """Assemblies that directly contain a part, with quantity per assembly. Use for impact questions."""
+    return plmtools.where_used(part_no)
+
+
+if __name__ == "__main__":
+    mcp.run()   # stdio transport by default</code></pre>
+<p>Compare this with Part 4. The functions are the same; the decorator turns each into an MCP tool. The SDK builds the JSON schema from the type hints, takes the description from the docstring and adds parameter descriptions from <code>Field</code>. The annotation tells hosts these tools only read.</p>
+<h3>Step 3: inspect it</h3>
+<p>In a terminal, in the <code>p5-mcp</code> folder:</p>
+<pre><code>npx @modelcontextprotocol/inspector python bom_server.py</code></pre>
+<p>A browser page opens. Click Connect, then the Tools tab, then List Tools. You see exactly what any AI host would see: names, descriptions, input schemas and annotations. Call <code>where_used</code> with <code>E3-9001</code>, then with <code>E3-999</code>. Look at the History panel to see the raw JSON-RPC messages. This is the most useful debugging tool in MCP work; use it for every server you build.</p>
+<h3>Step 4: a Python client</h3>
+<pre><code>%%writefile try_bom.py
+"""Connect to the BOM server over stdio, list its tools and call two of them."""
+import asyncio
+import json
+import sys
+from mcp import Client, StdioServerParameters
+
+
+def text_of(result):
+    if result.structured_content is not None:
+        return json.dumps(result.structured_content)
+    return "\n".join(c.text for c in result.content if hasattr(c, "text"))
+
+
+async def main():
+    server = StdioServerParameters(command=sys.executable, args=["bom_server.py"])
+    async with Client(server) as client:
+        tools = (await client.list_tools()).tools
+        for t in tools:
+            print(f"{t.name}: read_only={t.annotations.read_only_hint}  {t.description[:60]}")
+        for name, args in [("search_parts", {"text": "windshield glass"}),
+                           ("where_used", {"part_no": "E3-9001"})]:
+            r = await client.call_tool(name, args)
+            print(f"\n{name}({args}) error={r.is_error}\n{text_of(r)[:300]}")
+
+
+asyncio.run(main())</code></pre>
+<pre><code>!python try_bom.py</code></pre>
+<p>The client started the server as a subprocess, performed the MCP handshake, discovered the tools and called them. Your agent in Unit 20 will do exactly this, then hand the tool list to the model.</p>
+<h3>Step 5 (optional): use it from Claude Desktop</h3>
+<p>If you use the Claude Desktop app, open Settings, Developer, Edit Config, and add your server to <code>claude_desktop_config.json</code> with the full path to your folder:</p>
+<pre><code>{
+  "mcpServers": {
+    "sahyadri-bom": {
+      "command": "python",
+      "args": ["/full/path/to/p5-mcp/bom_server.py"]
+    }
+  }
+}</code></pre>
+<p>Restart the app and ask "Which assemblies use bolt E3-9001, and who supplies the windshield glass?". The assistant asks permission, then calls your tools. Use only the synthetic data here; never connect real company systems to a personal account. Other free hosts that support MCP servers, such as VS Code with an AI extension, work in a similar way.</p>
+<h3>Done when</h3>
+<ul>
+<li>The Inspector lists your three tools with descriptions and the read-only annotation, and you have called each one.</li>
+<li><code>try_bom.py</code> prints the tools and two results.</li>
+<li>You have written down one thing the Inspector's history taught you about the protocol.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="b"><p>Where does the MCP SDK get each tool's input schema?</p><ol><li data-o="a">From a separate JSON file you write</li><li data-o="b">From the function's type hints and Field descriptions</li><li data-o="c">From the model</li></ol><p class="why">Type hints become the schema the host sees.</p></div>
+<div class="q" data-a="c"><p>Why does the server change directory to its own folder at start-up?</p><ol><li data-o="a">MCP requires it</li><li data-o="b">To run faster</li><li data-o="c">Hosts may start it from any folder, and it must still find its data files</li></ol><p class="why">A classic first-run failure with desktop hosts.</p></div>
+</div>
+</article>
+
+<article data-id="m5w18d3" data-type="case" data-title="Case: the integration tax" data-mins="75" data-watch="MCP enterprise adoption integration strategy" data-read="modelcontextprotocol.io, the specification overview page (skim the sections and what each covers)">
+<p class="lede">Sahyadri's AI ambitions are multiplying, and so are its integrations. You need to show the CIO what MCP changes and what it does not.</p>
+<h3>The situation</h3>
+<p>Eighteen months after the copilot pilot, Rahul Menon has four AI initiatives: the document copilot, the change impact agent, a supplier quality assistant and a coding assistant for the IT team. Each was built by a different team or vendor, with its own connectors to ENOVIA, SAP, the MES and SharePoint. An internal review finds:</p>
+<ul>
+<li>11 separate connectors, of which 7 read the same PLM data in different ways.</li>
+<li>Each connector costs about ₹6 lakh to build and ₹2 lakh a year to maintain; every PLM upgrade breaks several.</li>
+<li>Access control is implemented differently in each, and one connector uses a shared service account that can read every project.</li>
+<li>The business wants two more AI applications next year, and the board has approved an enterprise AI assistant for all staff.</li>
+</ul>
+<h3>Your questions</h3>
+<ol>
+<li>Estimate the current annual maintenance cost of the connectors, and what next year would add without a change of approach.</li>
+<li>How would MCP servers change the architecture? Sketch it in words.</li>
+<li>What is the most important security improvement, and why does MCP alone not guarantee it?</li>
+<li>Propose a sequence for the next 6 months.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> 11 × ₹2 lakh = ₹22 lakh a year in maintenance. Two new applications needing, say, 3 connectors each add about ₹36 lakh to build and ₹12 lakh a year. The enterprise assistant would need connectors to all systems again.</p>
+<p><strong>2.</strong> One MCP server per system domain: PLM parts and BOM, PLM changes, documents, ERP stock and orders. Each server enforces the user's access rights and lifecycle rules once. Every AI application, including the enterprise assistant, connects as a client to the servers it needs. Upgrading the PLM means updating one server, not seven connectors.</p>
+<p><strong>3.</strong> Replacing the shared service account with per-user access: each server acts with the requesting user's identity and rights. MCP defines how authentication works for HTTP servers, but the server's author must still map the user to PLM permissions correctly and give tools only the scope they need. A badly built MCP server with a super-user account is just as dangerous as a bad connector, and easier for more applications to reach.</p>
+<p><strong>4.</strong> Part 1: inventory connectors and pick the PLM parts and BOM domain (7 connectors read it). Parts 2 and 3: build the PLM server with per-user access and logging, and move the document copilot and change agent onto it. Parts 4 and 5: add the documents server, connect the enterprise assistant in read-only mode for one department. Part 6: retire the old PLM connectors and measure maintenance and incidents against the baseline.</p>
+<p><strong>What the case teaches.</strong> MCP's value grows with the number of AI applications. Its main business case is lower integration cost and consistent control, and its main risk is building servers that are too powerful.</p>
+</details>
+</article>
+
+<article data-id="m5w18d4" data-type="review" data-title="Unit 18 review and work assignment" data-mins="60" data-watch="MCP explained simply review" data-read="Key ideas page, Part 5">
+<p class="lede">Six questions on MCP fundamentals, then an explainer of your own.</p>
+<div class="quiz graded">
+<div class="q" data-a="b"><p>In MCP, the host is:</p><ol><li data-o="a">The server running the PLM</li><li data-o="b">The AI application the user works in</li><li data-o="c">The cloud provider</li><li data-o="d">The model</li></ol><p class="why">The host contains one client per server.</p></div>
+<div class="q" data-a="d"><p><code>plm://parts/E3-2400</code> is most likely:</p><ol><li data-o="a">A tool</li><li data-o="b">A prompt</li><li data-o="c">A transport</li><li data-o="d">A resource URI</li></ol><p class="why">Resources are addressed by URIs.</p></div>
+<div class="q" data-a="a"><p>A tool annotated <code>readOnlyHint=True</code> tells the host that:</p><ol><li data-o="a">The tool does not change anything, so it may need less approval</li><li data-o="b">The tool is guaranteed safe</li><li data-o="c">The tool cannot fail</li><li data-o="d">The tool needs no input</li></ol><p class="why">It is a hint from the server; trust depends on who wrote the server.</p></div>
+<div class="q" data-a="c"><p>What does MCP standardise?</p><ol><li data-o="a">Which model to use</li><li data-o="b">How accurate answers are</li><li data-o="c">How AI applications discover and call capabilities of external systems</li><li data-o="d">PLM data models</li></ol><p class="why">It is a protocol, not a model or a data standard.</p></div>
+<div class="q" data-a="b"><p>In the integration case, the main business case for MCP was:</p><ol><li data-o="a">Better model accuracy</li><li data-o="b">Fewer connectors to build and maintain, and access control implemented once per system</li><li data-o="c">Free licences</li><li data-o="d">Faster PLM upgrades in general</li></ol><p class="why">N + M instead of N × M, with consistent control.</p></div>
+<div class="q" data-a="a"><p>Which tool is most useful for debugging an MCP server?</p><ol><li data-o="a">The MCP Inspector</li><li data-o="b">A spreadsheet</li><li data-o="c">The model's temperature</li><li data-o="d">A vector database</li></ol><p class="why">It shows what hosts see, and the raw messages.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: the MCP explainer</h3>
+<p>Write a half-page MCP explainer for a customer's IT architect: the problem, the host-client-server picture, the three primitives with PLM examples, and the three security questions they should ask of any MCP server (whose identity it uses, what it can change, what it logs). Keep it for your presales kit.</p></div>
+</article>
+
+</section>
+
+<section data-week="19" data-title="Building PLM MCP servers" data-goal="Design MCP servers around engineering domains, using tools, resources and prompts, and test them automatically.">
+
+<article data-id="m5w19d1" data-type="lesson" data-title="Designing servers for engineering data" data-mins="80" data-watch="MCP server design best practices; MCP resources and prompts explained" data-read="modelcontextprotocol.io, concepts pages for tools, resources and prompts">
+<p class="lede">A server is a product with users: models, applications and the engineers behind them. This session covers how to cut servers, which primitive to use for what, and how to make tools that models use well.</p>
+<h3>Cut servers by domain and by risk</h3>
+<p>One giant "PLM server" with 60 tools confuses models and makes permissions coarse. One server per table is too fine. A good cut follows business domains and their owners, with risk as a second axis:</p>
+<table class="stmt">
+<thead><tr><th>Server</th><th>Domain</th><th>Typical tools</th><th>Risk</th></tr></thead>
+<tbody>
+<tr><td>sahyadri-bom</td><td>Parts and product structure</td><td>search_parts, get_part, where_used, qty_per_vehicle, stock_exposure</td><td>Read only</td></tr>
+<tr><td>sahyadri-changes</td><td>Engineering change</td><td>list_changes, get_change, draft_change_request</td><td>Reads, plus one draft action</td></tr>
+<tr><td>sahyadri-docs</td><td>Controlled documents</td><td>search_docs, plus each document as a resource</td><td>Read only, access-filtered</td></tr>
+</tbody>
+</table>
+<p>A host can then connect a read-only assistant to the first and third, and only the change agent to the second.</p>
+<h3>Tools, resources or prompts?</h3>
+<ul>
+<li>Use a <strong>tool</strong> when the model should decide to fetch or do something during a task, with parameters: "where is this part used?"</li>
+<li>Use a <strong>resource</strong> for a thing with an address that a user or application might attach as context: a document, a part record, a BOM. Resource templates such as <code>doc://{doc_id}</code> make a whole collection addressable.</li>
+<li>Use a <strong>prompt</strong> to ship the company's way of doing a task: "impact review for change X" with the right checklist. Prompts are how process knowledge travels with the server.</li>
+</ul>
+<h3>Tool design, revisited for MCP</h3>
+<ul>
+<li><strong>Write for the model.</strong> Descriptions say when to use the tool and how it relates to others ("use search_parts first if you have no part number").</li>
+<li><strong>Return what a reader needs, not everything.</strong> Ten relevant fields, not the 120 columns of the PLM table. Paginate long lists.</li>
+<li><strong>Validate inputs.</strong> Check part number formats and return a helpful error, so the model can correct itself.</li>
+<li><strong>Annotate honestly.</strong> <code>readOnlyHint</code>, <code>destructiveHint</code>, <code>idempotentHint</code> (repeating the call has no further effect) and <code>openWorldHint</code> (the tool reaches outside systems) help hosts decide when to ask the user.</li>
+<li><strong>Prefer drafts to writes.</strong> <code>draft_change_request</code> creates a draft that a person submits in the PLM; it does not release anything.</li>
+</ul>
+<h3>Test servers like any software</h3>
+<p>The Python SDK can connect a client to a server object in the same process, with no subprocess. That makes automated tests fast: list the tools, check their schemas and annotations, call each with good and bad inputs, and assert on the results. Run the tests on every change. A server many AI applications depend on deserves a test suite.</p>
+<div class="callout"><h4>In your job</h4><p>When a customer asks how their PLM would be exposed to AI, sketch servers by domain with a risk column, as in the table above. It shows you have thought about permissions before features, which is what architects and security teams look for first.</p></div>
+<div class="quiz">
+<div class="q" data-a="a"><p>Why split PLM into several servers instead of one?</p><ol><li data-o="a">Clearer tools for models, and permissions per domain and risk</li><li data-o="b">MCP limits servers to three tools</li><li data-o="c">It is cheaper to host</li></ol><p class="why">Domain and risk drive the cut.</p></div>
+<div class="q" data-a="b"><p>A controlled document that users attach as context is best exposed as:</p><ol><li data-o="a">A prompt</li><li data-o="b">A resource with a URI such as doc://DS-FAST-001</li><li data-o="c">A destructive tool</li></ol><p class="why">Addressable things are resources.</p></div>
+<div class="q" data-a="c"><p>What does <code>idempotentHint=True</code> mean?</p><ol><li data-o="a">The tool is read only</li><li data-o="b">The tool is fast</li><li data-o="c">Calling it again with the same arguments has no further effect</li></ol><p class="why">Useful for retries.</p></div>
+</div>
+</article>
+
+<article data-id="m5w19d2" data-type="lab" data-title="Lab: three PLM servers with tests" data-mins="120" data-watch="MCP python sdk resources prompts example; pytest basics" data-read="MCP Python SDK README, resources, prompts and testing sections">
+<p class="lede">You will build the full BOM server, a changes server with a draft action, and a documents server with resources, then write an automated test suite that checks all three.</p>
+<h3>Step 1: the BOM server, complete</h3>
+<pre><code>%%writefile bom_server.py
+"""MCP server: read-only access to the Sahyadri part master and E3 BOM."""
+import json
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from typing import Annotated
+from pydantic import Field
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
+import plmtools
+
+mcp = MCPServer("sahyadri-bom",
+                instructions="Read-only access to the Sahyadri E3 part master and engineering BOM. "
+                             "Use search_parts first when you only have a description.")
+READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+PartNo = Annotated[str, Field(description="Part number, for example E3-2400", pattern=r"^\s*[A-Za-z0-9]+-[A-Za-z0-9]+\s*$")]
+
+
+@mcp.tool(annotations=READ_ONLY)
+def search_parts(text: Annotated[str, Field(description="Words from the part description")]) -> list[dict]:
+    """Find part numbers from a description such as 'windshield glass'."""
+    return plmtools.search_parts(text)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def get_part(part_no: PartNo) -> dict:
+    """Part master record: revision, lifecycle, make or buy, material, mass, cost, supplier, stock."""
+    return plmtools.get_part(part_no)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def where_used(part_no: PartNo) -> list[dict]:
+    """Assemblies that directly contain a part, with quantity per assembly."""
+    return plmtools.where_used(part_no)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def qty_per_vehicle(part_no: PartNo) -> dict:
+    """Total quantity of a part in one vehicle, rolled up through every BOM level."""
+    return plmtools.qty_per_vehicle(part_no)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def stock_exposure(part_no: PartNo) -> dict:
+    """Stock at Chakan, its value in rupees, and months of production it covers."""
+    return plmtools.stock_exposure(part_no)
+
+
+@mcp.resource("plm://parts/{part_no}", mime_type="application/json")
+def part_record(part_no: str) -> str:
+    """The part master record as JSON."""
+    return json.dumps(plmtools.get_part(part_no), default=str)
+
+
+if __name__ == "__main__":
+    mcp.run()</code></pre>
+<p>The <code>pattern</code> on <code>PartNo</code> makes the SDK reject malformed input before your code runs, and the pattern appears in the schema, so the model sees the expected format.</p>
+<h3>Step 2: the changes server, with a draft action and a prompt</h3>
+<pre><code>%%writefile changes_server.py
+"""MCP server: engineering changes. Reads, plus creating drafts that people submit in the PLM."""
+import datetime
+import json
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from typing import Annotated
+from pydantic import Field
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
+import plmtools
+
+mcp = MCPServer("sahyadri-changes",
+                instructions="Engineering changes for the E3 platform. You can read changes and create "
+                             "draft change requests. Drafts are reviewed and submitted by people in the PLM.")
+READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+DRAFT = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+DOCS = {d["id"]: d for d in json.load(open("docs.json"))}
+
+
+@mcp.tool(annotations=READ_ONLY)
+def list_changes(part_no: Annotated[str, Field(description="Optional part number filter")] = "",
+                 status: Annotated[str, Field(description="Optional: new, draft, in review or released")] = "") -> list[dict]:
+    """List engineering changes (ECN and ECR), optionally for one part or status."""
+    return plmtools.list_changes(part_no, status)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def get_change(change_id: Annotated[str, Field(description="For example ECN-2026-0139")]) -> dict:
+    """One change with its record and, if released as a notice, the notice text."""
+    rows = [c for c in plmtools.list_changes() if c["change_id"] == change_id.strip().upper()]
+    if not rows:
+        return {"error": f"No change {change_id}. Use list_changes to see the IDs."}
+    notice = DOCS.get(rows[0]["change_id"])
+    return {**rows[0], "notice_text": notice["text"] if notice else None}
+
+
+@mcp.tool(annotations=DRAFT)
+def draft_change_request(title: Annotated[str, Field(max_length=120)],
+                         part_numbers: Annotated[list[str], Field(min_length=1, max_length=20)],
+                         reason: Annotated[str, Field(max_length=1000)]) -> dict:
+    """Create a DRAFT change request for a person to review and submit in the PLM. Nothing is released."""
+    unknown = [p for p in part_numbers if "error" in plmtools.get_part(p)]
+    if unknown:
+        return {"error": f"Unknown part numbers: {unknown}. Check them with the BOM server first."}
+    os.makedirs("drafts", exist_ok=True)
+    draft = {"draft_id": "DRAFT-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+             "title": title, "part_numbers": part_numbers, "reason": reason, "status": "draft"}
+    with open("drafts/change_requests.jsonl", "a") as f:
+        f.write(json.dumps(draft) + "\n")
+    return draft
+
+
+@mcp.prompt()
+def impact_review(change_id: str) -> str:
+    """Sahyadri's standard checklist for a change impact review."""
+    return (f"Prepare an impact review for {change_id}. Use get_change first. For every affected part: "
+            "where_used, qty_per_vehicle, stock_exposure and open changes. Search the documents for the change "
+            "procedure and any standard that applies. List what could not be checked. Do not decide the change "
+            "class; list the facts the change control board needs.")
+
+
+if __name__ == "__main__":
+    mcp.run()</code></pre>
+<h3>Step 3: the documents server, with resources</h3>
+<pre><code>%%writefile docs_server.py
+"""MCP server: search and read Sahyadri controlled documents (current revisions only)."""
+import json
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from typing import Annotated
+from pydantic import Field
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
+from docindex import build_index, get_index, search
+
+mcp = MCPServer("sahyadri-docs",
+                instructions="Search and read Sahyadri controlled documents. Superseded revisions are excluded. "
+                             "Always cite the document ID and revision.")
+READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+DOCS = {d["id"]: d for d in json.load(open("docs.json")) if d["status"] != "superseded"}
+try:
+    COL = get_index()
+except Exception:
+    COL = build_index()
+
+
+@mcp.tool(annotations=READ_ONLY)
+def search_docs(query: Annotated[str, Field(description="What to look for, in plain words")],
+                k: Annotated[int, Field(ge=1, le=8)] = 4) -> list[dict]:
+    """Search standards, procedures, work instructions, change notices and test reports."""
+    return [{"doc_id": h["doc_id"], "rev": h["rev"], "status": h["status"], "title": h["title"],
+             "text": h["text"][:800]} for h in search(COL, query, k=k)]
+
+
+@mcp.resource("doc://{doc_id}", mime_type="text/markdown")
+def document(doc_id: str) -> str:
+    """The full text of one current document."""
+    d = DOCS.get(doc_id.upper())
+    if not d:
+        return f"No current document {doc_id}."
+    return f"# {d['id']}: {d['title']}\nRevision {d['rev']}, {d['status']}, {d['date']}\n\n{d['text']}"
+
+
+if __name__ == "__main__":
+    mcp.run()</code></pre>
+<h3>Step 4: an automated test suite</h3>
+<pre><code>%%writefile test_servers.py
+"""Tests for the three Sahyadri MCP servers. Run: python test_servers.py"""
+import asyncio
+import json
+import sys
+from mcp import Client
+import bom_server, changes_server, docs_server
+
+failures = []
+
+
+def check(name, condition):
+    print(("PASS " if condition else "FAIL ") + name)
+    if not condition:
+        failures.append(name)
+
+
+def text_of(r):
+    if r.structured_content is not None:
+        return json.dumps(r.structured_content)
+    return "\n".join(c.text for c in r.content if hasattr(c, "text"))
+
+
+async def test_bom():
+    async with Client(bom_server.mcp) as c:
+        tools = {t.name: t for t in (await c.list_tools()).tools}
+        check("bom: five tools", len(tools) == 5)
+        check("bom: all read only", all(t.annotations.read_only_hint for t in tools.values()))
+        r = await c.call_tool("qty_per_vehicle", {"part_no": "E3-9001"})
+        check("bom: 24 bolts per vehicle", '"qty_per_vehicle": 24' in text_of(r))
+        r = await c.call_tool("get_part", {"part_no": "E3-999"})
+        check("bom: unknown part gives a helpful error", "No part" in text_of(r))
+        r = await c.call_tool("get_part", {"part_no": "DROP TABLE parts;"})
+        check("bom: malformed part number rejected", r.is_error)
+        res = await c.read_resource("plm://parts/E3-4200")
+        check("bom: part resource", "ClearView" in res.contents[0].text)
+
+
+async def test_changes():
+    async with Client(changes_server.mcp) as c:
+        tools = {t.name: t for t in (await c.list_tools()).tools}
+        check("changes: draft tool is not read only", not tools["draft_change_request"].annotations.read_only_hint)
+        check("changes: draft tool is not destructive", tools["draft_change_request"].annotations.destructive_hint is False)
+        r = await c.call_tool("get_change", {"change_id": "ECN-2026-0139"})
+        check("changes: notice text included", "fatigue" in text_of(r))
+        r = await c.call_tool("draft_change_request", {"title": "Test", "part_numbers": ["E3-0001"], "reason": "x"})
+        check("changes: draft refuses unknown parts", "Unknown part" in text_of(r))
+        prompts = (await c.list_prompts()).prompts
+        check("changes: impact_review prompt", any(p.name == "impact_review" for p in prompts))
+
+
+async def test_docs():
+    async with Client(docs_server.mcp) as c:
+        r = await c.call_tool("search_docs", {"query": "torque wrench calibration interval", "k": 8})
+        check("docs: superseded revision excluded", "DS-FAST-001-B" not in text_of(r))
+        res = await c.read_resource("doc://DS-FAST-001")
+        check("docs: document resource", "45 Nm" in res.contents[0].text)
+        res = await c.read_resource("doc://DS-FAST-001-B")
+        check("docs: superseded document not readable", "No current document" in res.contents[0].text)
+
+
+async def main():
+    await test_bom()
+    await test_changes()
+    await test_docs()
+    print(f"\n{len(failures)} failures" if failures else "\nall tests passed")
+
+
+asyncio.run(main())
+sys.exit(1 if failures else 0)   # a non-zero exit code fails an automated build</code></pre>
+<pre><code>!python test_servers.py</code></pre>
+<p>The tests connect to each server object in the same process, with no subprocess and no model. They check the contract hosts rely on: tools, annotations, results, errors and resources. Note the test that sends <code>DROP TABLE parts;</code> as a part number: input validation is part of the contract.</p>
+<h3>Done when</h3>
+<ul>
+<li>All three servers start in the Inspector, and you have used the <code>impact_review</code> prompt and read a <code>doc://</code> resource there.</li>
+<li><code>python test_servers.py</code> reports all tests passed.</li>
+<li>The servers and tests are committed under <code>p5-mcp</code>.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="c"><p>Why does <code>draft_change_request</code> check part numbers against the part master?</p><ol><li data-o="a">MCP requires it</li><li data-o="b">To slow down the model</li><li data-o="c">So a draft never contains invented parts, whatever the model sends</li></ol><p class="why">Validate against the system of record inside the server.</p></div>
+<div class="q" data-a="a"><p>Why can the tests run without a model?</p><ol><li data-o="a">They test the server's contract directly through an MCP client</li><li data-o="b">The servers contain a model</li><li data-o="c">They only test the README</li></ol><p class="why">Deterministic tests for deterministic code.</p></div>
+</div>
+</article>
+
+<article data-id="m5w19d3" data-type="case" data-title="Case: which system gets an MCP server first?" data-mins="75" data-watch="prioritising AI use cases enterprise data" data-read="Your Part 1 Unit 1 use-case scoring notes">
+<p class="lede">A furniture maker wants to "MCP-enable everything". You need a ranking and a first server design.</p>
+<h3>The situation</h3>
+<p>Vasant Furniture (from Unit 7) now has an enterprise AI assistant licensed for 300 office staff. Its CIO wants MCP servers for five systems, but budget allows two this year at about ₹15 lakh each. Facts:</p>
+<table class="stmt">
+<thead><tr><th>System</th><th>Who would use it through AI</th><th>Questions a week (estimate)</th><th>Data quality</th><th>Sensitivity</th></tr></thead>
+<tbody>
+<tr><td>PLM (product catalogue, BOMs, finishes)</td><td>Sales, design, planning</td><td class="n">1,200</td><td>Good</td><td>Medium</td></tr>
+<tr><td>ERP orders and stock</td><td>Sales, customer service</td><td class="n">2,500</td><td>Good</td><td>Medium</td></tr>
+<tr><td>Quality system (complaints, 8D)</td><td>Quality, customer service</td><td class="n">300</td><td>Poor, free text</td><td>Medium</td></tr>
+<tr><td>HR system</td><td>All staff</td><td class="n">900</td><td>Good</td><td>High (personal data)</td></tr>
+<tr><td>Machine data (MES)</td><td>Production engineers</td><td class="n">150</td><td>Mixed</td><td>Low</td></tr>
+</tbody>
+</table>
+<p>Customer service spends about 6 minutes per order-status question today, answering by switching between ERP and PLM screens.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Rank the five systems for an MCP server this year, and explain your top two.</li>
+<li>Estimate the value of your first choice with stated assumptions.</li>
+<li>Design the first server: three to five tools, any resources and one prompt.</li>
+<li>Why is the HR system not in your top two, despite many users?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> 1: ERP orders and stock (highest volume, clean data, clear task). 2: PLM catalogue and BOMs (good data, many users, and combined with ERP it answers "when can we deliver this kitchen in this finish?"). 3: MES (low sensitivity, but few users). 4: Quality (valuable, but needs the extraction work from Unit 10 first). 5: HR (high sensitivity; needs a separate privacy review).</p>
+<p><strong>2.</strong> Suppose half of the 2,500 weekly questions are order-status questions from customer service, and AI cuts each from 6 minutes to 2. Savings: 1,250 × 4 = 5,000 minutes, about 83 hours a week, roughly 4,000 hours a year. At ₹500 an hour, about ₹20 lakh a year, more than the server's cost in year one. Faster answers to customers are an added benefit.</p>
+<p><strong>3.</strong> Server "vasant-orders": tools <code>find_order(customer or order number)</code>, <code>order_status(order_no)</code> with line items and promised dates, <code>stock_for_item(item_code, finish)</code>, <code>delivery_estimate(item_code, finish, quantity)</code> (computed in code), all read only. Resource <code>order://{order_no}</code>. Prompt "customer status reply" that drafts a polite update in the company's style. Access: sales and service roles only; customers' personal data limited to what the role sees in ERP.</p>
+<p><strong>4.</strong> Personal data raises legal and privacy obligations, and errors are personally harmful. It needs a privacy impact assessment, strict per-user access and careful scoping. It may be worth doing, but not as an early, fast-value server.</p>
+<p><strong>What the case teaches.</strong> Prioritise MCP servers like any use case: value, data readiness and risk. Start where questions are frequent, data is clean and sensitivity is manageable.</p>
+</details>
+</article>
+
+<article data-id="m5w19d4" data-type="review" data-title="Unit 19 review and work assignment" data-mins="60" data-watch="MCP tools resources prompts differences" data-read="Key ideas page, Part 5">
+<p class="lede">Six questions on server design, then design a server for your platform.</p>
+<div class="quiz graded">
+<div class="q" data-a="c"><p>Which is the best reason to expose a checklist as an MCP prompt?</p><ol><li data-o="a">Prompts are cheaper than tools</li><li data-o="b">Models cannot read checklists otherwise</li><li data-o="c">It ships the company's way of doing a task to every host that uses the server</li><li data-o="d">Prompts run automatically</li></ol><p class="why">Prompts carry process knowledge.</p></div>
+<div class="q" data-a="a"><p>A tool returns all 120 PLM columns for a part. The main problem is:</p><ol><li data-o="a">It wastes context and buries the fields the model needs</li><li data-o="b">MCP forbids it</li><li data-o="c">It is too fast</li><li data-o="d">Nothing</li></ol><p class="why">Return what a reader needs.</p></div>
+<div class="q" data-a="d"><p>Which annotation fits <code>draft_change_request</code>?</p><ol><li data-o="a">readOnlyHint=True</li><li data-o="b">destructiveHint=True</li><li data-o="c">openWorldHint=True</li><li data-o="d">readOnlyHint=False, destructiveHint=False</li></ol><p class="why">It creates something, but destroys nothing.</p></div>
+<div class="q" data-a="b"><p>Where should part-number validation live?</p><ol><li data-o="a">Only in the model's prompt</li><li data-o="b">In the server, in the input schema and against the part master</li><li data-o="c">In the host's user interface</li><li data-o="d">Nowhere</li></ol><p class="why">The server is the last line of defence for its system.</p></div>
+<div class="q" data-a="c"><p>In the Vasant case, why was ERP orders the first server?</p><ol><li data-o="a">It had the most sensitive data</li><li data-o="b">It was the newest system</li><li data-o="c">Highest question volume, clean data and a clear task with measurable time saved</li><li data-o="d">The CIO liked it</li></ol><p class="why">Value, readiness and risk.</p></div>
+<div class="q" data-a="a"><p>What do the in-process server tests check?</p><ol><li data-o="a">The server's contract: tools, annotations, results, errors and resources</li><li data-o="b">The model's accuracy</li><li data-o="c">The network speed</li><li data-o="d">The host's appearance</li></ol><p class="why">Contract tests, run on every change.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: a server for your platform</h3>
+<p>Using your Unit 14 tool list, design an MCP server for one Dassault-style capability you present often (for example a manufacturing process plan, a resource library or a requirements module): its name, instructions, 3 to 6 tools with annotations, resources with URI templates, and one prompt. One page. If time allows, implement two of its tools over synthetic data.</p></div>
+</article>
+
+</section>

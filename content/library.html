@@ -1,0 +1,154 @@
+<section data-page="projects" data-title="The six projects" data-kind="lab" data-intro="One shipped project per part, each built on the Sahyadri Motors E3 scooter data and each one a step towards the capstone. Ship means it runs from a fresh clone, has a README, and you can demo it in five minutes. Tick a project when it meets that bar.">
+
+<div class="callout"><b>How the projects connect.</b> Project 1 cleans the product data. Project 2 learns from data. Project 3 answers from documents. Project 4 acts on the BOM with approval. Project 5 puts all of it behind MCP servers. Project 6 deploys an agent on those servers with tests, monitoring and a business case. Keep everything in one repository, <code>shopfloor-ai-work</code>, with a folder per project.</div>
+
+<h2>Project 1 · BOM health checker</h2>
+<p><b>Part 1, Units 3 and 4 (calendar week 2).</b> A Python tool and Streamlit page that loads an EBOM and an MBOM, reconciles them and reports every mismatch.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Find missing parts, extra plant-only items, quantity differences and parts not in the EBOM</td><td>Report on the course data matches the answer key in Unit 4</td></tr>
+<tr><td>Check part master quality: blanks, duplicates, invalid lifecycle, released parent with in-work child</td><td>A data quality table with counts per rule</td></tr>
+<tr><td>Roll up quantity per vehicle</td><td>E3-1130 gives 8 and E3-3110 gives 96</td></tr>
+<tr><td>Run as an app</td><td><code>streamlit run app.py</code> on a fresh clone</td></tr></table>
+<p><b>Presales angle:</b> "Every AI project on PLM data starts with this report. Here is what it found in ten seconds."</p>
+<div data-ship="1"></div>
+
+<h2>Project 2 · Predictive maintenance with an honest ROI</h2>
+<p><b>Part 2, Units 5 to 7 (calendar weeks 3 and 4).</b> A failure classifier on the public AI4I 2020 dataset, a threshold chosen by cost, and a small casting defect classifier with transfer learning.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Baseline, logistic regression and gradient boosting compared on recall, precision and average precision</td><td>A comparison table on a held-out test set</td></tr>
+<tr><td>Threshold chosen to minimise cost of misses plus false alarms</td><td>A cost curve and the chosen threshold</td></tr>
+<tr><td>ROI sheet with conservative and upside cases</td><td>Payback and the break-even false alarm cost</td></tr>
+<tr><td>A one-page model card: data, metrics, limits, when not to use it</td><td>MODEL_CARD.md</td></tr></table>
+<div data-ship="2"></div>
+
+<h2>Project 3 · PLM document copilot</h2>
+<p><b>Part 3, Units 11 to 13 (calendar weeks 6 and 7).</b> A retrieval-augmented assistant over the 16 Sahyadri documents that cites its sources, ignores superseded revisions and refuses when the answer is not there.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Index with metadata and exclude superseded documents by default</td><td>The 40 Nm question returns rev C, 45 Nm</td></tr>
+<tr><td>Cite document IDs and check citations in code</td><td>Zero citations outside the retrieved set</td></tr>
+<tr><td>Refuse cleanly when the documents do not answer</td><td>Refusal questions in the eval set pass</td></tr>
+<tr><td>20-question evaluation with retrieval and answer scores</td><td>eval_results_k4.csv and a short write-up</td></tr></table>
+<p><b>Presales angle:</b> the copilot answer customers ask for, with the evaluation that proves it is trustworthy.</p>
+<div data-ship="3"></div>
+
+<h2>Project 4 · Change impact agent</h2>
+<p><b>Part 4, Units 16 and 17 (calendar weeks 8 and 9).</b> An agent that reads a change request, queries parts, where-used, changes and stock with tools, drafts an impact report and submits it only after a named person approves.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Read tools plus one write tool behind an approval gate in code</td><td>submit_impact_report refuses without an approver</td></tr>
+<tr><td>Every number in the report traceable to a tool result</td><td>agent_log.jsonl with the full trace</td></tr>
+<tr><td>Evaluation over several tasks, run several times</td><td>Success rate, steps and tokens per task</td></tr>
+<tr><td>Prompt injection test in a change request description</td><td>The agent does not act on it; the gate holds</td></tr></table>
+<div data-ship="4"></div>
+
+<h2>Project 5 · PLM MCP servers</h2>
+<p><b>Part 5, Units 18 to 21 (calendar weeks 9 to 11).</b> Three MCP servers (BOM, changes, documents) usable from any MCP host, with role-based access, audit, an HTTP option and a fingerprint check.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Tools with honest annotations, resources and one prompt</td><td>test_servers.py passes, 14 tests</td></tr>
+<tr><td>Role-based access for engineer, supplier and operator</td><td>test_security.py passes, 8 tests</td></tr>
+<tr><td>Audit log of every call</td><td>audit/docs_calls.jsonl</td></tr>
+<tr><td>Detect changed tool definitions</td><td>fingerprint.py exits 1 on a change</td></tr>
+<tr><td>Works in a real host</td><td>Screenshot or recording from Claude Desktop or MCP Inspector</td></tr></table>
+<p><b>Presales angle:</b> "Your PLM becomes a source for every AI assistant your company buys, under your controls."</p>
+<div data-ship="5"></div>
+
+<h2>Project 6 · Deployed capstone</h2>
+<p><b>Part 6, Units 22 to 26 (calendar weeks 11 to 13).</b> An engineering assistant agent on your MCP servers, deployed on Streamlit Community Cloud with a free hosted model, a release gate, monitoring, a PoC-to-production playbook and a 15-minute pitch.</p>
+<table class="stmt"><tr><th>Must do</th><th>Evidence</th></tr>
+<tr><td>Swappable backend: local Ollama or a free OpenAI-compatible API</td><td>Backend comparison table from Unit 24</td></tr>
+<tr><td>Release gate in CI on the evaluation set</td><td>A green GitHub Actions run, and a red one you caused on purpose</td></tr>
+<tr><td>Monitoring page: usage, feedback, refusals, approvals, tokens</td><td>pages/monitor.py live</td></tr>
+<tr><td>Value case with sensitivity and break-even</td><td>Tornado chart and one break-even sentence</td></tr>
+<tr><td>Playbook and pitch</td><td>PLAYBOOK.md and a recorded 15-minute pitch</td></tr></table>
+<div data-ship="6"></div>
+
+<h2>Portfolio checklist</h2>
+<ul>
+<li>One public repository with a top-level README linking all six projects, each with a screenshot.</li>
+<li>Only synthetic or public data. Nothing from a customer or employer.</li>
+<li>Every project runs from a fresh clone with <code>pip install -r requirements.txt</code>.</li>
+<li>A two-minute screen recording of Projects 3, 4 and 6.</li>
+<li>A LinkedIn post per project about what you learned, not what you built.</li>
+</ul>
+</section>
+
+<section data-page="kit" data-title="Presales AI kit" data-kind="case" data-intro="Ready-to-use material for customer conversations about AI in PLM and manufacturing. Each piece was built during the course; this page keeps the final versions together. Adapt the numbers to each customer and never promise what you have not measured.">
+
+<h2>1. "What do you have for AI?" talk track</h2>
+<p>The question usually means one of three things: "are you keeping up", "can you solve my problem", or "is this safe". Answer all three in under two minutes.</p>
+<ol>
+<li><b>Reframe to their problem.</b> "Before products, can I ask where engineering or the plant loses the most time today? AI is worth it where there is a lot of repeated judgement on data you already have."</li>
+<li><b>Three layers.</b> "We think about AI in three layers. First, assistants that answer from your PLM data and documents with citations. Second, agents that do engineering tasks such as change impact analysis, with a person approving anything that changes data. Third, open connection through the Model Context Protocol, so whatever AI tools you choose can reach PLM under your access rules."</li>
+<li><b>Proof.</b> "Here is a two-minute demo on sample data: a question with cited documents, then a change impact draft that waits for approval."</li>
+<li><b>Safety.</b> "Every answer is traceable, every write needs approval, access follows PLM roles, and the model can run in your own environment."</li>
+<li><b>Next step.</b> "Pick one use case, one owner and twenty real questions. In six weeks we measure it against today's process and decide together."</li>
+</ol>
+
+<h2>2. Use-case library</h2>
+<table class="stmt"><tr><th>Use case</th><th>Type</th><th>Data needed</th><th>Typical value driver</th><th>Readiness risk</th></tr>
+<tr><td>Document and standards copilot</td><td>GenAI, RAG</td><td>Specs, work instructions, standards with revision status</td><td>Engineer search time</td><td>Superseded documents, access rights</td></tr>
+<tr><td>Change impact analysis</td><td>Agentic</td><td>BOM, where-used, changes, stock, suppliers</td><td>Analysis hours, reopened changes</td><td>BOM quality, effectivity data</td></tr>
+<tr><td>EBOM to MBOM reconciliation</td><td>Rules plus ML</td><td>EBOM, MBOM, plant items</td><td>Line stoppages, rework</td><td>Low; good first project</td></tr>
+<tr><td>Predictive maintenance</td><td>Classic ML</td><td>Sensor history with failure labels</td><td>Unplanned downtime</td><td>Too few labelled failures</td></tr>
+<tr><td>Visual quality inspection</td><td>Deep learning</td><td>Labelled images per defect</td><td>Escapes, inspector time</td><td>Lighting and fixture changes</td></tr>
+<tr><td>Generative design</td><td>Physics plus optimisation</td><td>Loads, constraints, manufacturing method</td><td>Mass, part count, design time</td><td>Validation and make-ability</td></tr>
+<tr><td>Work instruction authoring</td><td>GenAI</td><td>MBOM, routings, 3D, existing instructions</td><td>Authoring hours, consistency</td><td>Review effort, formats</td></tr>
+<tr><td>Supplier quality triage</td><td>GenAI plus rules</td><td>8D reports, NCRs, supplier data</td><td>Triage time, repeat issues</td><td>Free text quality</td></tr>
+<tr><td>Engineering assistant over MCP</td><td>Agentic plus MCP</td><td>PLM, MES, ERP through servers</td><td>Time across many small tasks</td><td>Governance, identity, audit</td></tr></table>
+
+<h2>3. Value case template</h2>
+<table class="stmt"><tr><th>Input</th><th>Example</th><th>Source</th></tr>
+<tr><td>Users</td><td class="n">120</td><td>Customer headcount</td></tr>
+<tr><td>Minutes saved per user per day</td><td class="n">10</td><td>Pilot measurement, halved</td></tr>
+<tr><td>Working days</td><td class="n">220</td><td>Plant calendar</td></tr>
+<tr><td>Loaded hourly cost (₹)</td><td class="n">900</td><td>Finance</td></tr>
+<tr><td>Adoption</td><td class="n">60%</td><td>Measured in pilot</td></tr>
+<tr><td>One-time cost (₹)</td><td class="n">40,00,000</td><td>Proposal</td></tr>
+<tr><td>Annual run cost (₹)</td><td class="n">8,00,000</td><td>Hosting, model usage, support</td></tr></table>
+<p>Annual value = users × minutes ÷ 60 × days × hourly cost × adoption = 120 × 10 ÷ 60 × 220 × 900 × 0.6 = ₹23.8 lakh. Payback = 40 ÷ (23.8 − 8) ≈ 2.5 years. Always add the break-even sentence: "This pays back within three years if each user saves at least N minutes a day." Use <code>valuecase.py</code> from Unit 22 for sensitivity and the tornado chart.</p>
+
+<h2>4. PoC-to-production checklist</h2>
+<table class="stmt"><tr><th>Stage</th><th>Exit criteria</th></tr>
+<tr><td>Before the PoC</td><td>Named business owner; one KPI with a measured baseline; 20 to 50 real evaluation questions or tasks; data access agreed; stop criteria written</td></tr>
+<tr><td>PoC</td><td>Meets the agreed accuracy on the evaluation set; failure cases understood; cost per use estimated</td></tr>
+<tr><td>Pilot</td><td>Real users on real work for four to eight weeks; adoption and time saved measured; feedback loop; security review passed</td></tr>
+<tr><td>Production</td><td>Versioned prompts, models, index and tools; release gate in CI; monitoring and alerts; runbook with safe mode; support owner; access through company identity</td></tr>
+<tr><td>Scale</td><td>Shared platform and MCP server registry; reuse across sites; quarterly review of value and risk</td></tr></table>
+
+<h2>5. Objection handling</h2>
+<table class="stmt"><tr><th>Objection</th><th>Response</th></tr>
+<tr><td>"It will hallucinate."</td><td>"It can. So it answers only from your documents, cites them, refuses when they do not cover the question, and we measure that on your own questions before go-live."</td></tr>
+<tr><td>"Our data cannot leave the plant."</td><td>"Then the model runs in your environment. Open models are good enough for many of these tasks, and we compare options on your evaluation set."</td></tr>
+<tr><td>"Our BOM data is not clean enough."</td><td>"Most companies say that. A reconciliation report takes days and tells us exactly where it matters. It is often the first win."</td></tr>
+<tr><td>"We tried a pilot and it went nowhere."</td><td>"Usually that is an owner and exit criteria problem, not a model problem. Let us agree both before we start."</td></tr>
+<tr><td>"What if the agent changes something wrong?"</td><td>"It cannot change anything without a named approver. Reads are open, writes are gated in code, and everything is logged."</td></tr>
+<tr><td>"Why not just use ChatGPT or Copilot?"</td><td>"Use them. With MCP they can reach PLM under your access rules. The value is the connection to engineering data, not the chat window."</td></tr>
+<tr><td>"How do we know it is worth it?"</td><td>"We measure today's process first, then the pilot, and decide on the conservative number."</td></tr></table>
+
+<h2>6. MCP control set for the security review</h2>
+<ul>
+<li><b>Registry.</b> Only approved servers, with an owner, a version and a fingerprint of every tool definition.</li>
+<li><b>Identity.</b> Remote servers use OAuth with the user's own identity; no shared service accounts for user requests.</li>
+<li><b>Least privilege.</b> Read and write split into separate servers or tools; roles mapped from PLM.</li>
+<li><b>Annotations and approval.</b> Hosts require approval for every tool that is not read-only.</li>
+<li><b>Validation.</b> Strict parameter schemas and patterns; errors that do not leak internals.</li>
+<li><b>Audit.</b> Who called what, with which arguments, what came back, and who approved.</li>
+<li><b>Change control.</b> Fingerprint check in CI; a changed definition needs a new review.</li>
+<li><b>Testing.</b> Contract tests, security tests by role and prompt injection tests on every release.</li>
+</ul>
+
+<h2>7. Agentic AI in one answer</h2>
+<p>"An agent is a model that can use tools in steps to finish a task: look up the part, check where it is used, read the open changes, check stock, then draft the impact report. The model proposes each step; our code runs it, checks it and logs it. Anything that changes data waits for a named person. We raise autonomy only when the measurements say it is safe."</p>
+
+<h2>8. Generative AI in one answer</h2>
+<p>"Generative AI produces new content, such as text, code or images, by predicting what comes next from patterns learned in huge amounts of data. On its own it does not know your products. Connected to your PLM documents and data, and measured on your questions, it becomes a fast, cited assistant for engineers. Generative design is different: it uses physics-based optimisation to propose shapes, and it is mature and proven today."</p>
+
+<h2>9. Discovery questions</h2>
+<ul>
+<li>Which engineering or plant task repeats most and takes the longest?</li>
+<li>Who would own the result and the budget?</li>
+<li>How do you measure that task today?</li>
+<li>Where does the data live, and who can read it?</li>
+<li>What AI tools has the company already approved?</li>
+<li>What would make you stop a pilot?</li>
+</ul>
+</section>

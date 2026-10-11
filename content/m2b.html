@@ -1,0 +1,278 @@
+<section data-week="7" data-title="Deep learning and vision" data-goal="Explain how a neural network learns, and fine-tune an image model that separates good castings from defective ones.">
+
+<article data-id="m2w7d1" data-type="lesson" data-title="Neural networks without the maths" data-mins="80" data-watch="3blue1brown but what is a neural network; transfer learning explained" data-read="Dive into Deep Learning, chapter 7.1, from fully connected layers to convolutions">
+<p class="lede">Trees are great for tables. For images, sound and text, neural networks took over in the 2010s. This session explains why, in words an engineering manager will follow.</p>
+<h3>A network is a stack of adjustable filters</h3>
+<p>A neural network is a long chain of simple calculations. Each layer takes numbers in, multiplies them by <em>weights</em>, adds them up and passes the result through a simple bend (if the sum is negative, output zero). With millions of weights and enough layers, the chain can represent almost any relationship between input and output.</p>
+<p>Training means adjusting the weights. Show the network an image, compare its guess with the label, and nudge every weight slightly in the direction that would have made the guess less wrong. The method for computing those nudges is called <strong>backpropagation</strong>; the nudging is <strong>gradient descent</strong>. Repeat over thousands of images, many times. One full pass through the training data is an <strong>epoch</strong>.</p>
+<h3>Why images need convolutions</h3>
+<p>A 224 × 224 colour image is about 150,000 numbers. Connecting every pixel to every unit of the next layer would need billions of weights. A <strong>convolutional network</strong> instead slides small filters (3 × 3 pixels) across the image. Early filters learn to respond to edges and spots; later layers combine them into textures, then shapes, then objects. The same filter works anywhere in the image, which is exactly what you want when a crack can appear anywhere on a casting.</p>
+<h3>Transfer learning: the reason this is practical</h3>
+<p>Training a vision network from scratch needs millions of images. But networks trained on general photo collections (ImageNet) already know edges, textures and shapes. <strong>Fine-tuning</strong> takes such a pretrained network and retrains only its last layers, then gently all of them, on your images. A few hundred labelled images per class can be enough for a clear visual defect. This is why visual inspection pilots can start small.</p>
+<h3>What can go wrong</h3>
+<ul>
+<li><strong>Shortcut learning.</strong> If every defective sample was photographed on a Tuesday under warmer light, the model may learn "warm light means defect". Check what the model looks at, and photograph good and bad parts in the same conditions.</li>
+<li><strong>Distribution shift.</strong> A new camera, a dirty lens or a new supplier's material changes the images. Accuracy drops silently. Monitor it.</li>
+<li><strong>Rare defects.</strong> If a defect type appears five times a year, you will not have enough examples. <em>Anomaly detection</em> helps: train only on good parts and flag anything that looks unusual.</li>
+<li><strong>Label disagreement.</strong> Two inspectors often disagree on borderline parts. If people cannot agree, the model cannot learn a sharp boundary. Measure inspector agreement first.</li>
+</ul>
+<h3>GPUs</h3>
+<p>Training multiplies huge grids of numbers, which graphics processors do thousands at a time. Kaggle and Colab give limited free GPU time, enough for this course. In production, inspection models usually run on a small edge computer next to the camera.</p>
+<div class="callout"><h4>In your job</h4><p>When a customer asks about visual inspection, ask four questions: how many images of each defect type exist, do inspectors agree on borderline cases, is lighting controlled, and what happens to a rejected part. Those answers decide feasibility more than the model choice does.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why does transfer learning need far fewer images than training from scratch?</p><ol><li data-o="a">It uses smaller images</li><li data-o="b">The pretrained network already knows general visual features such as edges and textures</li><li data-o="c">It skips the test set</li></ol><p class="why">Only the task-specific part needs to be learned from your data.</p></div>
+<div class="q" data-a="c"><p>A model works well in the lab but fails after the plant installs a new camera. This is:</p><ol><li data-o="a">Overfitting to the labels</li><li data-o="b">Leakage</li><li data-o="c">Distribution shift</li></ol><p class="why">The input images now differ from the training images.</p></div>
+<div class="q" data-a="a"><p>A defect appears only a few times a year. Which approach suits it best?</p><ol><li data-o="a">Anomaly detection trained on good parts</li><li data-o="b">A larger classifier</li><li data-o="c">Waiting for more defects before doing anything</li></ol><p class="why">Anomaly detection only needs plenty of normal examples, which you have.</p></div>
+</div>
+</article>
+
+<article data-id="m2w7d2" data-type="lab" data-title="Lab: a casting defect classifier" data-mins="110" data-watch="fastai vision learner fine tune tutorial; kaggle notebook GPU" data-read="fastai course lesson 1 and Deep Learning for Coders chapter 1">
+<p class="lede">You will fine-tune a pretrained network to tell defective impeller castings from good ones, look at its mistakes, and save it for later. Use a Kaggle notebook, because the dataset is already on Kaggle and the GPU is free.</p>
+<h3>Step 1: set up the notebook (10 minutes)</h3>
+<ol>
+<li>Open the <a href="https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product" target="_blank" rel="noopener">casting product dataset</a> on Kaggle and click New Notebook. The dataset is attached automatically.</li>
+<li>In the notebook's right panel, under Session options, set Accelerator to a GPU. You may need to verify your phone number with Kaggle once to unlock GPUs.</li>
+</ol>
+<h3>Step 2: find the images</h3>
+<pre><code>from pathlib import Path
+root = Path("/kaggle/input")
+for p in sorted(root.rglob("*")):
+    if p.is_dir():
+        print(p, len(list(p.glob("*.jpeg"))))</code></pre>
+<p>Look for a folder containing <code>train</code> and <code>test</code>, each with <code>def_front</code> and <code>ok_front</code> subfolders of 300 × 300 grey-scale images. Set <code>path</code> to the folder that holds <code>train</code> and <code>test</code>. On most copies it is the one below; adjust if yours differs.</p>
+<pre><code>path = root / "real-life-industrial-dataset-of-casting-product" / "casting_data" / "casting_data"
+print([p.name for p in path.iterdir()])
+print(len(list((path / "train" / "def_front").glob("*.jpeg"))), "defective training images")
+print(len(list((path / "train" / "ok_front").glob("*.jpeg"))), "good training images")</code></pre>
+<h3>Step 3: load the data</h3>
+<pre><code>from fastai.vision.all import *
+
+dls = ImageDataLoaders.from_folder(
+    path, train="train", valid="test",
+    item_tfms=Resize(224),
+    batch_tfms=aug_transforms(do_flip=True, flip_vert=True, max_rotate=20.0),
+    bs=64)
+dls.show_batch(max_n=8)</code></pre>
+<p><code>item_tfms</code> resizes each image to what the pretrained network expects. <code>batch_tfms</code> adds augmentation: random flips and rotations, so the network learns that a defect is a defect whichever way the casting lies. Look at the batch. Can you see the defects yourself?</p>
+<h3>Step 4: fine-tune a pretrained network</h3>
+<pre><code>learn = vision_learner(dls, resnet18, metrics=[error_rate, Recall(pos_label=0), Precision(pos_label=0)])
+learn.fine_tune(3)</code></pre>
+<p>fastai sorts class names alphabetically, so <code>def_front</code> is class 0. That is why <code>pos_label=0</code>: we treat "defective" as the positive class. <code>fine_tune(3)</code> first trains only the new final layer for one epoch, then the whole network for three. On a GPU it takes a few minutes. Watch the error rate fall each epoch.</p>
+<h3>Step 5: study the mistakes</h3>
+<pre><code>interp = ClassificationInterpretation.from_learner(learn)
+interp.plot_confusion_matrix()
+interp.plot_top_losses(9, nrows=3)</code></pre>
+<p>Top losses are the images the model was most confidently wrong about, or least sure of. Look at each: is the label wrong, is the defect tiny, or is the image unusual? This is where you learn whether the problem is the model or the data. Write down what you see.</p>
+<h3>Step 6: save the model</h3>
+<pre><code>learn.export("/kaggle/working/casting_model.pkl")
+learn_inf = load_learner("/kaggle/working/casting_model.pkl")
+test_img = next((path / "test" / "def_front").glob("*.jpeg"))
+learn_inf.predict(test_img)</code></pre>
+<p>The prediction returns the class, its index and the probabilities. Download <code>casting_model.pkl</code> from the Output panel. Project 6 can reuse it.</p>
+<h3>Step 7: an anomaly-detection thought experiment</h3>
+<p>Count how many defective images you would need for a defect type that appears 10 times a year. Then read the overview on the <a href="https://www.mvtec.com/company/research/datasets/mvtec-ad" target="_blank" rel="noopener">MVTec AD page</a> and write three sentences on how training only on good parts changes the data you need.</p>
+<h3>Done when</h3>
+<ul>
+<li>Your notebook reports error rate, and recall and precision for defective parts on the test folder.</li>
+<li>You have written down what the top-loss images have in common.</li>
+<li>The notebook is saved to your portfolio under <code>p2-predictive-maintenance/vision</code>, without the dataset.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="a"><p>Why add flips and rotations as augmentation?</p><ol><li data-o="a">So the model learns that a defect means the same thing whatever the orientation</li><li data-o="b">To make the images smaller</li><li data-o="c">To increase the number of classes</li></ol><p class="why">Augmentation teaches invariances you know are true.</p></div>
+<div class="q" data-a="c"><p>What are "top losses"?</p><ol><li data-o="a">The images with the largest file size</li><li data-o="b">The epochs with the highest error</li><li data-o="c">The images the model got most confidently wrong or was least sure about</li></ol><p class="why">They are the fastest way to find label errors and hard cases.</p></div>
+</div>
+</article>
+
+<article data-id="m2w7d3" data-type="case" data-title="Case: inspecting laminate panels" data-mins="75" data-watch="AI visual inspection business case manufacturing" data-read="AI for Everyone, unit 2, AI project workflow">
+<p class="lede">A Home and Lifestyle customer wants cameras to replace inspectors. You need to size the opportunity and steer them away from the wrong first step.</p>
+<h3>The situation</h3>
+<p>Vasant Furniture is a fictional maker of modular kitchens and wardrobes in Bengaluru. Its panel line cuts and edge-bands about 9,000 laminated panels a day. Four inspectors per shift, three shifts, check every panel for scratches, chipped edges, edge-band gaps and colour mismatch. Each inspector costs ₹4.2 lakh a year fully loaded.</p>
+<p>About 1.8% of panels have a defect. Inspectors catch about 85% of them; the rest reach customers' homes, where a replacement visit costs on average ₹6,500. The operations head, Deepa Nair, says: "I want a camera system that replaces all 12 inspectors. A vendor quoted ₹1.1 crore."</p>
+<p>A quick audit of 500 panels shows: two inspectors agreed on 94% of panels, but on panels with small scratches they agreed only 60% of the time. Colour mismatch is judged under the shop's normal lighting, which changes through the day.</p>
+<h3>Your questions</h3>
+<ol>
+<li>What is the annual cost of escaped defects today?</li>
+<li>Which defect types are good first targets for a vision model, and which are hard? Why?</li>
+<li>Deepa wants to replace all inspectors. What would you propose instead for the first phase?</li>
+<li>Estimate the value of your proposal with stated assumptions.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Panels a year: 9,000 × about 300 days = 2.7 million. Defective: 1.8% ≈ 48,600. Escaped: 15% ≈ 7,290. At ₹6,500 each, about ₹4.7 crore a year. That is far more than the inspectors' cost of 12 × ₹4.2 lakh ≈ ₹50 lakh.</p>
+<p><strong>2.</strong> Good targets: chipped edges and edge-band gaps (clear geometry, consistent appearance, inspectors agree). Hard targets: small scratches (inspectors disagree, so labels are noisy) and colour mismatch (uncontrolled lighting; this needs controlled light and colour measurement, not just a classifier).</p>
+<p><strong>3.</strong> Position the camera as a second inspector, not a replacement. Start with edge defects under controlled lighting at the end of the edge-banding machine. Keep human inspectors and use the camera to catch what they miss. Meanwhile, write a scratch standard with photographs so inspectors agree, which creates clean labels for phase 2.</p>
+<p><strong>4.</strong> Suppose edge defects are half of all defects and the camera catches 90% of the edge defects inspectors miss. Escapes avoided ≈ 7,290 × 50% × 90% ≈ 3,280 a year, worth about ₹2.1 crore. Even at half that, the ₹1.1 crore system pays back within a year, without cutting a single inspector. Headcount changes can come later, once the system has proved itself.</p>
+<p><strong>What the case teaches.</strong> The money in quality is usually in escapes, not inspection labour. Framing vision AI as "catch what people miss" is more valuable, easier to prove and easier for the plant to accept than "replace people".</p>
+</details>
+</article>
+
+<article data-id="m2w7d4" data-type="review" data-title="Unit 7 review and work assignment" data-mins="60" data-watch="convolutional neural network explained review" data-read="Key ideas page, Part 2">
+<p class="lede">Six questions on deep learning and vision, then a feasibility checklist for your own accounts.</p>
+<div class="quiz graded">
+<div class="q" data-a="c"><p>Training a network means:</p><ol><li data-o="a">Writing rules for each layer by hand</li><li data-o="b">Adding more layers until the error is zero</li><li data-o="c">Adjusting the weights step by step to reduce the error on labelled examples</li><li data-o="d">Compressing the images</li></ol><p class="why">Backpropagation computes how to nudge each weight; gradient descent applies the nudges.</p></div>
+<div class="q" data-a="a"><p>Convolutional filters suit images because:</p><ol><li data-o="a">The same small filter detects a pattern anywhere in the image</li><li data-o="b">They need no training</li><li data-o="c">They only work on colour images</li><li data-o="d">They read the file name</li></ol><p class="why">Weight sharing across positions makes them efficient and position-independent.</p></div>
+<div class="q" data-a="d"><p>In the lab, why is <code>pos_label=0</code> used for recall and precision?</p><ol><li data-o="a">Zero means good parts</li><li data-o="b">fastai requires it</li><li data-o="c">It makes training faster</li><li data-o="d">Classes are sorted alphabetically, so <code>def_front</code> is class 0, and defects are the class we care about</li></ol><p class="why">Always check which class is "positive" before reading recall.</p></div>
+<div class="q" data-a="b"><p>Two inspectors agree on only 60% of small-scratch panels. For a model this means:</p><ol><li data-o="a">The model will be 60% accurate at best on everything</li><li data-o="b">Scratch labels are noisy, so the model cannot learn a sharp boundary until the standard is clarified</li><li data-o="c">Scratches are easy to detect</li><li data-o="d">More GPUs are needed</li></ol><p class="why">Label quality caps model quality.</p></div>
+<div class="q" data-a="c"><p>In the Vasant case, where was most of the money?</p><ol><li data-o="a">Inspector salaries</li><li data-o="b">Camera hardware</li><li data-o="c">Defects escaping to customers' homes</li><li data-o="d">Electricity</li></ol><p class="why">About ₹4.7 crore of escapes against about ₹50 lakh of inspection labour.</p></div>
+<div class="q" data-a="a"><p>What does <code>fine_tune(3)</code> do in fastai?</p><ol><li data-o="a">Trains the new head for one epoch, then the whole network for three epochs</li><li data-o="b">Trains three separate networks</li><li data-o="c">Resizes images three times</li><li data-o="d">Runs three test sets</li></ol><p class="why">Freeze, train the head, then unfreeze and train everything gently.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: a vision feasibility checklist</h3>
+<p>For one account with visual quality checks (welds, paint, labels, panels, hull plates), answer: which defect types exist, roughly how many examples of each a year, whether lighting is controlled, whether inspectors agree, and what an escaped defect costs. Add the use case to your library with a feasibility rating from 1 to 5.</p></div>
+</article>
+
+</section>
+
+<section data-week="8" data-title="How generative models work" data-goal="Explain how models generate text, images and shapes, and tell generative design, topology optimisation and generative AI apart.">
+
+<article data-id="m2w8d1" data-type="lesson" data-title="From predicting to generating" data-mins="85" data-watch="3blue1brown but what is a GPT; how diffusion models work explained simply" data-read="Hugging Face LLM Course, chapter 1, how do transformers work">
+<p class="lede">Generative AI looks like magic and is mostly prediction, repeated. This session bridges what you learned in this part to the three parts that follow: generative AI, agents and MCP.</p>
+<h3>A language model predicts the next token</h3>
+<p>Text is cut into <strong>tokens</strong>: pieces of words, typically three or four characters on average in English. A language model is a neural network trained on a huge amount of text to do one thing: given the tokens so far, give a probability for every possible next token. To generate, you pick a token from that distribution, add it to the text, and ask again. A paragraph is a few hundred repetitions of that loop.</p>
+<p>How the next token is picked matters. Always taking the most likely token gives safe, repetitive text. Sampling with some randomness gives variety. The <strong>temperature</strong> setting controls this: low temperature for extraction and code, higher for brainstorming.</p>
+<h3>The transformer and attention</h3>
+<p>Older models read text one word at a time and forgot the start of long sentences. The <strong>transformer</strong> (2017) lets every token look at every other token in the context and decide which ones matter for it. That mechanism is called <strong>attention</strong>. In "the bracket on the left frame member cracked because <em>it</em> was undersized", attention lets "it" connect to "bracket". Stacking dozens of attention layers and training on trillions of tokens produced today's large language models.</p>
+<h3>Pretraining, then instruction tuning</h3>
+<p>A raw model trained only to predict text will continue a question rather than answer it. Models are then tuned on examples of good answers and on human preferences, which turns a text predictor into an assistant. This is why the same underlying model can follow instructions, refuse harmful requests and use tools: all of it was trained in on top of next-token prediction.</p>
+<h3>Images: diffusion</h3>
+<p>Image generators mostly use <strong>diffusion</strong>. During training, the model sees images with increasing amounts of random noise added and learns to predict the noise. To generate, it starts from pure noise and removes it step by step, guided by a text prompt. The same idea is being applied to 3D shapes and to engineering fields such as flow and stress.</p>
+<h3>Three things engineers call "generative"</h3>
+<table class="stmt">
+<thead><tr><th>Approach</th><th>How it works</th><th>Output</th></tr></thead>
+<tbody>
+<tr><td>Topology optimisation</td><td>Physics-based: removes material from a design space where stress is low, under given loads and constraints. Deterministic.</td><td>One organic shape per set of inputs</td></tr>
+<tr><td>Generative design</td><td>Runs many optimisations with different materials, manufacturing methods and goals, and presents a range of options to compare.</td><td>Many candidate designs with trade-offs</td></tr>
+<tr><td>Generative AI</td><td>A model trained on data produces new content: text, code, images, and increasingly CAD sketches or parameters.</td><td>Drafts that need checking</td></tr>
+</tbody>
+</table>
+<p>Customers often mix these up. Generative design is physics plus search, and its results can be verified by simulation. Generative AI is learned from data and its output must be checked; it can be wrong in ways that look plausible.</p>
+<h3>Why generative AI is different from Part 2's models</h3>
+<ul>
+<li>It is general: one model writes, summarises, translates, extracts and reasons, without retraining.</li>
+<li>You steer it with words (prompts), not with training data.</li>
+<li>Its errors are fluent. A wrong answer looks as confident as a right one, so evaluation and grounding in your own documents (Part 3) matter more, not less.</li>
+<li>It can be given tools and act (Part 4), connected to your systems through a standard protocol (Part 5).</li>
+</ul>
+<div class="callout"><h4>In your job</h4><p>When a design customer says "we want generative AI for design", ask whether they mean exploring lighter shapes (generative design, available now and verifiable by simulation) or drafting content such as requirements, documents and code from engineering data (generative AI). Each is a different conversation and a different proof.</p></div>
+<div class="quiz">
+<div class="q" data-a="a"><p>A language model generates a paragraph by:</p><ol><li data-o="a">Repeatedly predicting a probability for each possible next token and picking one</li><li data-o="b">Looking up the answer in a database</li><li data-o="c">Copying the closest paragraph from its training data</li></ol><p class="why">Generation is next-token prediction in a loop.</p></div>
+<div class="q" data-a="c"><p>Which one is physics-based and deterministic?</p><ol><li data-o="a">A diffusion model</li><li data-o="b">A large language model</li><li data-o="c">Topology optimisation</li></ol><p class="why">It removes material according to computed stresses under defined loads.</p></div>
+<div class="q" data-a="b"><p>For extracting part numbers from change notices, which temperature suits best?</p><ol><li data-o="a">High, for creativity</li><li data-o="b">Low, for consistent output</li><li data-o="c">It makes no difference</li></ol><p class="why">Extraction wants the same answer every time.</p></div>
+</div>
+</article>
+
+<article data-id="m2w8d2" data-type="lab" data-title="Lab: build a tiny text generator, then meet real tokens" data-mins="90" data-watch="build a bigram language model python; tokenization explained tiktoken" data-read="Hugging Face LLM Course, chapter 2, tokenizers">
+<p class="lede">You will build a word-level language model from scratch in thirty lines, generate text with different temperatures, and then see how a real model's tokenizer cuts up engineering text. No GPU needed.</p>
+<h3>Step 1: a small corpus of work instructions</h3>
+<pre><code>corpus = """
+torque the frame bolts to 45 nm in a cross pattern .
+torque the axle bolts to 60 nm in a cross pattern .
+inspect the weld seam for porosity before painting .
+inspect the busbar joints for discolouration before sealing .
+fit the tail lamp and connect the lighting harness .
+fit the headlamp and connect the main harness .
+check the battery pack insulation before sealing the enclosure .
+check the frame weld seam for cracks before painting .
+"""
+words = corpus.split()
+print(len(words), "words,", len(set(words)), "distinct")</code></pre>
+<h3>Step 2: count what follows what</h3>
+<pre><code>from collections import defaultdict, Counter
+
+next_counts = defaultdict(Counter)
+for a, b in zip(words, words[1:]):
+    next_counts[a][b] += 1
+
+print(next_counts["the"].most_common(8))
+print(next_counts["before"].most_common())</code></pre>
+<p>This is a <strong>bigram model</strong>: it predicts the next word only from the current word. It has learned, for example, that after "before" comes "painting" or "sealing". A large language model does the same job, predicting the next token, but looks at thousands of previous tokens through attention and has learned from trillions of tokens.</p>
+<h3>Step 3: turn counts into probabilities and sample</h3>
+<pre><code>import random
+
+def next_word(word, temperature=1.0):
+    options = next_counts[word]
+    if not options:
+        return "."
+    items = list(options.items())
+    weights = [count ** (1 / temperature) for _, count in items]
+    return random.choices([w for w, _ in items], weights=weights)[0]
+
+def generate(start, n=12, temperature=1.0, seed=None):
+    random.seed(seed)
+    out = [start]
+    for _ in range(n):
+        out.append(next_word(out[-1], temperature))
+        if out[-1] == ".":
+            break
+    return " ".join(out)
+
+for t in [0.2, 1.0, 3.0]:
+    print(f"temperature {t}:")
+    for s in range(3):
+        print("   ", generate("torque", temperature=t, seed=s))</code></pre>
+<p>Raising counts to the power 1 ÷ temperature sharpens the distribution when the temperature is low and flattens it when high. In this tiny corpus most counts are 1, so temperature changes less than it would in a real model; after "the", though, "frame" (seen twice) wins far more often at 0.2. Now read the outputs closely. You will see sentences such as "torque the busbar joints for discolouration before sealing" or "torque the battery pack insulation before painting". Every word follows its neighbour plausibly, yet the instruction is nonsense. That is a hallucination in miniature: fluent, plausible and false. It happens for the same reason in large models: the output follows the patterns of language, not a check against reality. Higher temperatures make such jumps more frequent; lower temperatures make them rarer but never impossible.</p>
+<h3>Step 4: real tokens</h3>
+<pre><code>!pip -q install tiktoken
+import tiktoken
+enc = tiktoken.get_encoding("cl100k_base")
+
+for text in ["Torque the frame bolts to 45 Nm.",
+             "E3-1100 main frame weldment, rev C",
+             "ECN-2026-0147: replace M10x40 with M10x45 on the motor mount"]:
+    ids = enc.encode(text)
+    print(len(ids), "tokens:", [enc.decode([i]) for i in ids])</code></pre>
+<p>Common English words are single tokens. Part numbers and codes break into many small pieces. This matters: models handle long codes less reliably than words, and you pay for usage by the token. Count the tokens in a typical change notice from your work (write a made-up one with the same shape) and multiply by the number of changes a customer processes a year. You will use that number for cost estimates in Part 6.</p>
+<h3>Step 5 (optional): a real small model</h3>
+<pre><code>!pip -q install transformers torch
+from transformers import pipeline
+gen = pipeline("text-generation", model="distilgpt2")
+for t in [0.3, 1.2]:
+    print(gen("Inspect the weld seam for", max_new_tokens=20, do_sample=True, temperature=t)[0]["generated_text"])</code></pre>
+<p>This tiny model from 2019 writes fluent but meaningless continuations. It shows the raw next-token predictor before any instruction tuning. Compare it in your notes with how a modern assistant answers the same prompt.</p>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why did the bigram model produce "torque the battery pack insulation before painting"?</p><ol><li data-o="a">The corpus contains that sentence</li><li data-o="b">Each word follows the previous one plausibly, but nothing checks the whole sentence against reality</li><li data-o="c">The code has a bug</li></ol><p class="why">Local plausibility without grounding is the root of hallucination.</p></div>
+<div class="q" data-a="a"><p>Why do part numbers use many tokens?</p><ol><li data-o="a">Tokenizers are built from common text, so unusual codes split into small pieces</li><li data-o="b">Numbers are not allowed in tokens</li><li data-o="c">Each character is always one token</li></ol><p class="why">Frequent strings get their own tokens; rare ones are assembled from parts.</p></div>
+</div>
+</article>
+
+<article data-id="m2w8d3" data-type="case" data-title="Case: generative design at the shipyard" data-mins="75" data-watch="generative design case study weight reduction bracket additive manufacturing" data-read="Fusion generative design tutorial, first study">
+<p class="lede">A Marine and Offshore customer has heard "generative" from three vendors in a month. You need to separate the hype from what can be proved by Friday.</p>
+<h3>The situation</h3>
+<p>Konkan Shipyards is a fictional builder of patrol boats and offshore supply vessels in Goa. Its engineering director, Mahesh Kamat, has two goals: cut structural weight on a new fast patrol craft by 8% to reach its speed target, and cut the 14 weeks it takes to produce the detailed engineering documentation package for each new hull.</p>
+<p>In one month he has heard three pitches: "generative AI will design your hull", "generative design will lighten your brackets and foundations", and "a GenAI copilot will draft your documentation". He asks you: "Are these the same thing? Which should I fund first?"</p>
+<p>Facts you collect: the craft has about 1,200 machined or fabricated brackets and equipment foundations, totalling about 9 tonnes of a 140-tonne lightship weight. Classification society rules require every structural change to be justified by calculation. The documentation team is 9 people, and about 40% of their time goes on assembling standard sections from previous projects.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Explain the three pitches to Mahesh in one sentence each, in plain language.</li>
+<li>Can brackets and foundations alone deliver the 8% weight target? Show the arithmetic.</li>
+<li>Which pitch has the most provable value in the short term, and why?</li>
+<li>Propose a 6-week proof for one of the opportunities, with a success measure.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Generative AI designing the hull: a model trained on data proposes designs; today this is research-grade for primary structure and would face a hard time with class approval. Generative design: physics-based optimisation that explores many lighter shapes for a part under known loads, each verifiable by simulation. GenAI documentation copilot: a language model that drafts documents from your past projects and engineering data, reviewed by your team.</p>
+<p><strong>2.</strong> 8% of 140 tonnes is 11.2 tonnes. Brackets and foundations weigh 9 tonnes in total, so even removing all of them would not reach it. A realistic 20 to 30% saving on them is 1.8 to 2.7 tonnes, about 1.3 to 1.9% of lightship weight. Useful, but the rest must come from plating, stiffeners and equipment choices.</p>
+<p><strong>3.</strong> Generative design on brackets is the most provable: results are checked by simulation, the class society accepts calculation-backed changes, and a saving per bracket is measured in kilograms. The documentation copilot is also attractive (40% of 9 people's time is about 3.6 people), but needs well-organised past documents and review processes; it is a strong second step and a natural fit for Part 3's techniques.</p>
+<p><strong>4.</strong> Example: pick the 20 heaviest bracket types that are repeated across the hull. Run generative design studies with the yard's real load cases and manufacturing constraints (plate cutting and welding, not 3D printing). Success measure: total weight saved across all instances of those 20 types, with every design passing the yard's own verification. Present the result together with a plan for the documentation copilot.</p>
+<p><strong>What the case teaches.</strong> "Generative" covers very different technologies. Separating them, doing the weight arithmetic honestly and choosing the provable step first is what makes you the trusted adviser rather than the fourth pitch.</p>
+</details>
+</article>
+
+<article data-id="m2w8d4" data-type="review" data-title="Part 2 review and work assignment" data-mins="75" data-watch="machine learning vs generative AI differences" data-read="Key ideas page, Part 2">
+<p class="lede">Eight questions across this part. Then take the Part 2 quick quiz on the Exams page and update your talk track.</p>
+<div class="quiz graded">
+<div class="q" data-a="b"><p>A model that classifies pump impellers as OK or defective from images is:</p><ol><li data-o="a">Generative AI</li><li data-o="b">Deep learning for classification</li><li data-o="c">Topology optimisation</li><li data-o="d">A bigram model</li></ol><p class="why">It discriminates between classes; it does not generate content.</p></div>
+<div class="q" data-a="d"><p>The attention mechanism in a transformer lets:</p><ol><li data-o="a">The model run without a GPU</li><li data-o="b">The model skip training</li><li data-o="c">Images be generated from noise</li><li data-o="d">Each token weigh which other tokens in the context matter for it</li></ol><p class="why">Attention connects words across the whole context.</p></div>
+<div class="q" data-a="a"><p>Why do generative AI errors need special care?</p><ol><li data-o="a">Wrong answers are as fluent and confident as right ones</li><li data-o="b">They always contain spelling mistakes</li><li data-o="c">They only happen at temperature zero</li><li data-o="d">They are easy to spot</li></ol><p class="why">Fluency hides errors, so grounding and evaluation matter.</p></div>
+<div class="q" data-a="c"><p>In the shipyard case, why can brackets alone not reach an 8% weight cut?</p><ol><li data-o="a">Generative design does not work on brackets</li><li data-o="b">Class rules forbid it</li><li data-o="c">Brackets total 9 tonnes, less than the 11.2 tonnes needed even if removed entirely</li><li data-o="d">The craft is too small</li></ol><p class="why">Always check the ceiling of a lever before promising it.</p></div>
+<div class="q" data-a="b"><p>A defect appears rarely and a plant has thousands of images of good parts. Best first approach?</p><ol><li data-o="a">Generative AI</li><li data-o="b">Anomaly detection trained on good parts</li><li data-o="c">A bigger classifier with five defect images</li><li data-o="d">Raise the classification threshold</li></ol><p class="why">Use the data you have plenty of.</p></div>
+<div class="q" data-a="c"><p>A false alarm in predictive maintenance becomes expensive mainly when:</p><ol><li data-o="a">The model is a random forest</li><li data-o="b">The threshold is 0.5</li><li data-o="c">The plant's response to an alarm is to stop production</li><li data-o="d">The dataset is synthetic</li></ol><p class="why">Process design sets the cost of an alarm.</p></div>
+<div class="q" data-a="a"><p>Instruction tuning is what:</p><ol><li data-o="a">Turns a raw next-token predictor into an assistant that follows requests</li><li data-o="b">Teaches a model to see images</li><li data-o="c">Removes the need for tokens</li><li data-o="d">Makes a model deterministic</li></ol><p class="why">It is trained on top of pretraining using examples of good answers and preferences.</p></div>
+<div class="q" data-a="d"><p>Which metric is the honest headline for a rare-failure model?</p><ol><li data-o="a">Accuracy</li><li data-o="b">Training accuracy</li><li data-o="c">Number of trees</li><li data-o="d">Recall and precision at the chosen threshold, with the cost of each error type</li></ol><p class="why">Those tell the plant what it will experience.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: update your talk track</h3>
+<ol>
+<li>Take your list of customer AI questions from Unit 1. Add a one-line answer to each, using what you now know about ML, vision and generative models.</li>
+<li>Write a 150-word explanation of "generative design versus generative AI" that you could send to a customer engineering manager.</li>
+<li>Mark Project 2 shipped if its "done when" list is met.</li>
+</ol></div>
+</article>
+
+</section>

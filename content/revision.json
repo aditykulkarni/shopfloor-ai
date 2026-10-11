@@ -1,0 +1,582 @@
+{
+ "months": [
+  {
+   "n": 1,
+   "formulas": [
+    [
+     "Use-case score",
+     "Value × feasibility × data readiness, each 1 to 5",
+     "Rank ideas before building anything; a 1 on any factor sinks the use case."
+    ],
+    [
+     "Data quality dimensions",
+     "Completeness, accuracy, consistency, timeliness, validity, uniqueness",
+     "Check each before trusting a dataset."
+    ],
+    [
+     "Rolled-up quantity",
+     "Qty per vehicle = product of quantities along the path from the part to the top",
+     "E3-1130: 8 × 1 × 1 = 8; cells: 24 × 4 = 96."
+    ],
+    [
+     "EBOM to MBOM checks",
+     "Missing, extra (plant-only), quantity difference, not in EBOM",
+     "The four classes of reconciliation issue."
+    ],
+    [
+     "Outer join with indicator",
+     "merge(how='outer', indicator=True)",
+     "left_only, right_only and both tell you what is missing where."
+    ],
+    [
+     "Effort saved",
+     "Items × minutes per item × share automated ÷ 60 × hourly cost",
+     "Check elapsed time against effort before claiming savings."
+    ],
+    [
+     "Tidy data",
+     "One row per observation, one column per variable",
+     "Most cleaning work is getting here."
+    ],
+    [
+     "Notebook to tool",
+     "Functions + main guard + requirements + a simple UI",
+     "The step from analysis to something colleagues can use."
+    ]
+   ],
+   "cards": [
+    [
+     "AI, ML, deep learning",
+     "AI is the broad field; ML learns patterns from data; deep learning uses many-layered neural networks."
+    ],
+    [
+     "Generative AI",
+     "Models that produce new content (text, code, images) by predicting what comes next."
+    ],
+    [
+     "EBOM",
+     "Engineering BOM: the product structure as designed."
+    ],
+    [
+     "MBOM",
+     "Manufacturing BOM: the structure as built, with plant items, kits and consumables."
+    ],
+    [
+     "Primary key",
+     "A column that identifies each row uniquely, such as part number plus parent."
+    ],
+    [
+     "DataFrame",
+     "A pandas table with named columns, the workhorse of data work in Python."
+    ],
+    [
+     "groupby",
+     "Split rows into groups, apply a calculation to each, combine the results."
+    ],
+    [
+     "Data readiness",
+     "Whether data exists, is accessible, has the right history and quality for a use case."
+    ],
+    [
+     "Baseline",
+     "The measured performance of today's process, before any AI."
+    ],
+    [
+     "Streamlit",
+     "A Python library that turns a script into a simple web app."
+    ]
+   ]
+  },
+  {
+   "n": 2,
+   "formulas": [
+    [
+     "Precision",
+     "TP ÷ (TP + FP)",
+     "Of the alarms raised, how many were real."
+    ],
+    [
+     "Recall",
+     "TP ÷ (TP + FN)",
+     "Of the real failures, how many were caught."
+    ],
+    [
+     "Accuracy trap",
+     "Accuracy can be 97% by predicting 'no failure' when failures are 3%",
+     "Use recall and precision for rare events."
+    ],
+    [
+     "Cost-based threshold",
+     "Choose the threshold that minimises FN × cost of a miss + FP × cost of an alarm",
+     "Process design sets the cost of an alarm."
+    ],
+    [
+     "Average precision",
+     "Area under the precision-recall curve",
+     "A threshold-free comparison for imbalanced data."
+    ],
+    [
+     "Train, validation, test",
+     "Fit on train, tune on validation or cross-validation, report once on test",
+     "Never tune on the test set."
+    ],
+    [
+     "Transfer learning",
+     "Pretrained network + small labelled set + fine-tuning",
+     "Why vision pilots can start with hundreds of images."
+    ],
+    [
+     "Temperature",
+     "Sampling weight ∝ count^(1 ÷ temperature)",
+     "Low for extraction, higher for variety."
+    ]
+   ],
+   "cards": [
+    [
+     "Supervised learning",
+     "Learning a mapping from inputs to known labels."
+    ],
+    [
+     "Overfitting",
+     "Memorising training data so the model fails on new data."
+    ],
+    [
+     "Leakage",
+     "Information about the answer sneaking into the inputs, making results look too good."
+    ],
+    [
+     "Random forest",
+     "Many decision trees on random samples, voting together."
+    ],
+    [
+     "Gradient boosting",
+     "Trees built one after another, each correcting the previous ones' errors."
+    ],
+    [
+     "Convolution",
+     "A small filter slid across an image to detect a pattern anywhere."
+    ],
+    [
+     "Distribution shift",
+     "Inputs in use differ from the training data, so accuracy drops silently."
+    ],
+    [
+     "Anomaly detection",
+     "Training only on normal examples and flagging anything unusual."
+    ],
+    [
+     "Token",
+     "A piece of text, often part of a word, that a language model reads and writes."
+    ],
+    [
+     "Attention",
+     "The transformer mechanism that lets each token weigh every other token in the context."
+    ],
+    [
+     "Diffusion model",
+     "Generates images by removing noise step by step, guided by a prompt."
+    ],
+    [
+     "Topology optimisation",
+     "Physics-based removal of material where stress is low, under defined loads."
+    ],
+    [
+     "Generative design",
+     "Many optimisations across materials, methods and goals, giving options to compare."
+    ]
+   ]
+  },
+  {
+   "n": 3,
+   "formulas": [
+    [
+     "Annual usage cost",
+     "Questions × (tokens in × price in + tokens out × price out) ÷ 1,000,000",
+     "Usually small next to time saved."
+    ],
+    [
+     "Prompt anatomy",
+     "Role, task, context, rules, format, examples",
+     "Rules for edge cases fix most extraction errors."
+    ],
+    [
+     "Cosine similarity",
+     "a·b ÷ (|a| |b|)",
+     "1 means the same direction; Chroma distance = 1 − similarity."
+    ],
+    [
+     "RAG",
+     "Index → retrieve → augment → generate",
+     "Answers from your documents, with citations."
+    ],
+    [
+     "Hit rate at k",
+     "Share of questions whose expected document is in the top k results",
+     "Measure retrieval on its own first."
+    ],
+    [
+     "Four evaluation layers",
+     "Retrieval, correctness, faithfulness, behaviour",
+     "Look at every layer, not one number."
+    ],
+    [
+     "Citation check",
+     "Cited IDs ⊆ retrieved IDs",
+     "Catches fabricated citations in code."
+    ],
+    [
+     "Conservative value",
+     "Halve self-reported savings; use measured adoption",
+     "Decide on the floor, show the upside."
+    ]
+   ],
+   "cards": [
+    [
+     "Context window",
+     "The maximum tokens a model can consider in one call, including its answer."
+    ],
+    [
+     "Grounding",
+     "Supplying the documents, data or tool results the model must answer from."
+    ],
+    [
+     "Hallucination",
+     "A fluent, confident answer that is false."
+    ],
+    [
+     "System prompt",
+     "Instructions that set the assistant's role, rules and format for a conversation."
+    ],
+    [
+     "Few-shot prompting",
+     "Including worked examples of input and correct output in the prompt."
+    ],
+    [
+     "Structured output",
+     "Forcing the model's reply to match a JSON schema."
+    ],
+    [
+     "Prompt injection",
+     "Instructions hidden in data that the model may follow."
+    ],
+    [
+     "Embedding",
+     "A list of numbers representing the meaning of a text."
+    ],
+    [
+     "Chunking",
+     "Splitting documents into passages for embedding and retrieval."
+    ],
+    [
+     "Hybrid search",
+     "Combining keyword and semantic search."
+    ],
+    [
+     "Metadata filter",
+     "Restricting search by status, revision, plant or access rights before ranking."
+    ],
+    [
+     "Refusal",
+     "A fixed reply when the documents do not contain the answer; testable in code."
+    ],
+    [
+     "Fine-tuning",
+     "Further training of a model, good for style or narrow skills, not for changing facts."
+    ],
+    [
+     "LLM-as-judge",
+     "A model grading answers against a rubric; calibrate it against human grades."
+    ]
+   ]
+  },
+  {
+   "n": 4,
+   "formulas": [
+    [
+     "Tool call",
+     "Model proposes name + arguments → code runs it → result returned",
+     "The model never executes anything itself."
+    ],
+    [
+     "Agent loop",
+     "Repeat: model → tool calls → results, until no tool calls or step limit",
+     "History is the agent's working memory."
+    ],
+    [
+     "Five workflow patterns",
+     "Chaining, routing, parallelisation, orchestrator-workers, evaluator-optimiser",
+     "Use the simplest that works."
+    ],
+    [
+     "Autonomy levels",
+     "Read → draft → act with approval → act and notify → act silently",
+     "Raise autonomy only on evidence."
+    ],
+    [
+     "Grounding check",
+     "Every number in the answer appears in a tool result",
+     "Compare answers with traces."
+    ],
+    [
+     "Lethal trifecta",
+     "Private data + untrusted content + a way to act or send out",
+     "Break or gate one leg."
+    ],
+    [
+     "Agent metrics",
+     "Success rate, tool use, grounding, safety, steps, tokens, seconds",
+     "Run each task several times."
+    ],
+    [
+     "Impact analysis saving",
+     "Changes × (hours before − review hours) × hourly cost + avoided reopened changes",
+     "The value is in collection and consistency."
+    ]
+   ],
+   "cards": [
+    [
+     "Agentic AI",
+     "A model using tools in steps to complete a task, with your code in control of what runs."
+    ],
+    [
+     "Tool schema",
+     "The name, description and parameter definition a model sees for a tool."
+    ],
+    [
+     "ReAct",
+     "Reason, act with a tool, observe the result, repeat."
+    ],
+    [
+     "Trace",
+     "A record of every model request, tool call, argument and result in a run."
+    ],
+    [
+     "Step limit",
+     "A cap on loop iterations that stops runaway agents."
+    ],
+    [
+     "Workflow vs agent",
+     "A workflow follows a path fixed in code; an agent chooses its own path."
+    ],
+    [
+     "Human in the loop",
+     "A person approves defined actions before they take effect."
+    ],
+    [
+     "Approval gate",
+     "Code that refuses a write unless a named person has approved it."
+    ],
+    [
+     "Least privilege",
+     "Giving an agent only the tools and data the task needs."
+    ],
+    [
+     "Excessive agency",
+     "An AI system able to do more than its task requires (OWASP LLM risk)."
+    ],
+    [
+     "Audit trail",
+     "Who asked, what was proposed, who approved, what ran, and when."
+    ],
+    [
+     "Approval fatigue",
+     "Reviewers approving without reading, which turns a gate into theatre."
+    ]
+   ]
+  },
+  {
+   "n": 5,
+   "formulas": [
+    [
+     "Integrations",
+     "Without MCP: N apps × M systems; with MCP: N clients + M servers",
+     "The business case for the protocol."
+    ],
+    [
+     "MCP roles",
+     "Host (the app) → client (one per server) → server (a system's capabilities)",
+     "The model never talks to servers directly."
+    ],
+    [
+     "Three primitives",
+     "Tools (model-chosen), resources (app or user-chosen, by URI), prompts (user-chosen templates)",
+     "Pick the primitive by who decides."
+    ],
+    [
+     "Tool annotations",
+     "readOnlyHint, destructiveHint, idempotentHint, openWorldHint",
+     "Hints that drive host approval policy; trust depends on the author."
+    ],
+    [
+     "Transports",
+     "stdio (local process) or Streamable HTTP (networked, with OAuth)",
+     "Shared enterprise data belongs on HTTP servers."
+    ],
+    [
+     "Server cut",
+     "One server per business domain, split by risk",
+     "Clear tools for models, clear permissions for people."
+    ],
+    [
+     "MCP control set",
+     "Registry, identity, least privilege, validation, audit, change control, testing",
+     "Bring it to the first security review."
+    ],
+    [
+     "Fingerprint",
+     "Hash of each tool's description, schema and annotations",
+     "Detects rug pulls and unreviewed changes."
+    ]
+   ],
+   "cards": [
+    [
+     "Model Context Protocol",
+     "An open standard for connecting AI applications to tools and data."
+    ],
+    [
+     "MCP host",
+     "The AI application the user works in, such as a desktop assistant or your own agent."
+    ],
+    [
+     "MCP server",
+     "A program exposing a system's tools, resources and prompts in the MCP format."
+    ],
+    [
+     "Resource template",
+     "A URI pattern such as doc://{doc_id} that makes a collection addressable."
+    ],
+    [
+     "MCP Inspector",
+     "The official tool to list, call and debug an MCP server's capabilities."
+    ],
+    [
+     "JSON-RPC",
+     "The request and response message format MCP uses."
+    ],
+    [
+     "Elicitation",
+     "A server asking the host to ask the user a question, such as a confirmation."
+    ],
+    [
+     "Sampling",
+     "A server asking the host's model to generate text."
+    ],
+    [
+     "Tool poisoning",
+     "Hidden malicious instructions in a tool's description."
+    ],
+    [
+     "Rug pull",
+     "A server changing its tool definitions after they were approved."
+    ],
+    [
+     "Confused deputy",
+     "A server misusing tokens or rights it holds on behalf of someone else."
+    ],
+    [
+     "OAuth",
+     "The standard by which a user grants an application a scoped token to act for them."
+    ]
+   ]
+  },
+  {
+   "n": 6,
+   "formulas": [
+    [
+     "Three stages",
+     "Proof of concept (can it work) → pilot (does it work here) → production (does it keep working)",
+     "Write exit criteria before each stage."
+    ],
+    [
+     "Payback",
+     "One-time cost ÷ (annual value − annual run cost)",
+     "Simple and understood by every CFO."
+    ],
+    [
+     "NPV over 3 years",
+     "−one-time + Σ net ÷ (1 + r)^year",
+     "Discounts future savings."
+    ],
+    [
+     "Break-even assumption",
+     "The value of the key input at which NPV = 0",
+     "The most useful sentence in a pitch."
+    ],
+    [
+     "Version everything",
+     "Model version, prompts, index, tools, evaluation set",
+     "Each changes behaviour."
+    ],
+    [
+     "Release gate",
+     "Evaluation set thresholds that must pass before deployment",
+     "Exit code non-zero stops the pipeline."
+    ],
+    [
+     "Monitoring signals",
+     "Usage, feedback, refusals, tool errors, approvals, latency, tokens",
+     "Behaviour changes even when code does not."
+    ],
+    [
+     "Deployment choice",
+     "Data sensitivity, quality needed, volume and cost, latency, skills",
+     "Compare options on the customer's evaluation set."
+    ]
+   ],
+   "cards": [
+    [
+     "Pilot purgatory",
+     "Pilots that never reach production, usually for organisational reasons."
+    ],
+    [
+     "Business owner",
+     "The person who owns the KPI, the budget and the go or stop decision."
+    ],
+    [
+     "Tornado chart",
+     "Shows which assumptions move a value case most."
+    ],
+    [
+     "LLMOps",
+     "Operating LLM systems: versioning, tests, gates, monitoring, feedback and incident response."
+    ],
+    [
+     "Regression comparison",
+     "Checking question by question what a change fixed and what it broke."
+    ],
+    [
+     "Runbook",
+     "A written plan for incidents, including a safe mode."
+    ],
+    [
+     "Model pinning",
+     "Using an exact model version instead of a moving alias."
+    ],
+    [
+     "OpenAI-compatible API",
+     "A common interface many providers offer, which makes backends swappable."
+    ],
+    [
+     "Hybrid routing",
+     "Sending requests to different models by rules, such as data classification."
+    ],
+    [
+     "DPDP Act 2023",
+     "India's Digital Personal Data Protection Act."
+    ],
+    [
+     "ISO/IEC 42001",
+     "A certifiable AI management system standard."
+    ],
+    [
+     "NIST AI RMF",
+     "A framework with four functions: govern, map, measure, manage."
+    ],
+    [
+     "Hub and spoke",
+     "A central AI team owning platform and controls, with use cases built in departments."
+    ]
+   ]
+  }
+ ]
+}

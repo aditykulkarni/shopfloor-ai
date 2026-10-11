@@ -1,0 +1,444 @@
+<section data-week="25" data-title="Capstone: build, gate and deploy" data-goal="Ship a deployed engineering assistant built on your MCP servers, with an innovation twist, a release gate, usage logging and monitoring.">
+
+<article data-id="m6w25d1" data-type="lesson" data-title="Designing a capstone worth showing" data-mins="75" data-watch="AI product management basics; jobs to be done explained" data-read="Your Projects 3 to 5 READMEs and failure logs">
+<p class="lede">Your capstone brings together the copilot, the agent and the MCP servers in one deployed application, with one new capability that shows your own ideas. This session helps you choose that capability and define success before you build.</p>
+<h3>Start from a user and a job</h3>
+<p>Write one sentence: "<em>[User]</em> needs to <em>[job]</em>, which today takes <em>[baseline]</em>; the assistant will <em>[change]</em>, measured by <em>[metric]</em>." For example: "A manufacturing engineer needs to check that a new MBOM matches the released EBOM, which today takes about 2 hours per assembly; the assistant will list every difference with its source in seconds, measured by differences found against a manual check on 5 assemblies."</p>
+<h3>Choosing the innovation twist</h3>
+<p>Pick one new capability, small enough to finish in a week, that connects to something customers ask you about. Options that build directly on earlier projects:</p>
+<table class="stmt">
+<thead><tr><th>Twist</th><th>How you build it</th><th>Customer question it answers</th></tr></thead>
+<tbody>
+<tr><td>EBOM to MBOM differences</td><td>Your Part 1 BOM checker as an MCP tool (worked example in the lab)</td><td>"Can AI help with MBOM creation and reconciliation?"</td></tr>
+<tr><td>Visual inspection as a tool</td><td>Your Unit 7 casting model behind an MCP tool that takes an image path</td><td>"Can the assistant also look at parts?"</td></tr>
+<tr><td>Failure risk as a tool</td><td>Your Unit 6 maintenance model behind a tool that takes machine readings</td><td>"Can it combine sensor data with manuals?"</td></tr>
+<tr><td>Generative design brief</td><td>A prompt and tools that turn requirements and part data into a design study brief (loads, constraints, materials, targets)</td><td>"What do you have for generative design?"</td></tr>
+<tr><td>Multilingual shop-floor answers</td><td>Answers in Hindi or Marathi, with an evaluation of accuracy in each language</td><td>"Our operators do not work in English"</td></tr>
+<tr><td>Supplier document pre-check</td><td>Extraction (Unit 10) plus rules that flag missing PPAP elements</td><td>"Can AI reduce supplier quality paperwork?"</td></tr>
+</tbody>
+</table>
+<h3>Define done before you start</h3>
+<ul>
+<li>At least two evaluation tasks for the twist, added to the capstone evaluation set.</li>
+<li>The release gate passes with the twist included.</li>
+<li>The twist's tool definitions are fingerprinted and reviewed, like any other tool.</li>
+<li>The value of the twist is estimated with the Unit 22 model.</li>
+</ul>
+<h3>What makes a capstone convincing</h3>
+<p>Reviewers and customers are convinced by evidence, not features: a trace that shows where each fact came from, an approval step that cannot be skipped, a gate that fails when quality drops, a monitoring page with real usage, and an honest list of limitations. Your capstone should show all five.</p>
+<div class="callout"><h4>In your job</h4><p>The twist you choose becomes a demo you can reuse. Pick the one that matches the questions you hear most often from customers, so that the capstone keeps paying off in your presales work after the course.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>Which is the best capstone twist?</p><ol><li data-o="a">The most technically impressive one, whatever its use</li><li data-o="b">A small capability linked to a real customer question, with evaluation tasks and a value estimate</li><li data-o="c">A new model trained from scratch</li></ol><p class="why">Useful, finished and measured beats impressive and unfinished.</p></div>
+<div class="q" data-a="c"><p>Why fingerprint the twist's tool definitions too?</p><ol><li data-o="a">It makes the tool faster</li><li data-o="b">To hide it from the model</li><li data-o="c">Every tool is part of the controlled surface, so changes need review</li></ol><p class="why">Same controls for every tool.</p></div>
+</div>
+</article>
+
+<article data-id="m6w25d2" data-type="lab" data-title="Project 6: the deployed engineering assistant" data-mins="150" data-watch="deploy streamlit app community cloud secrets" data-read="Streamlit documentation, deploy your app and secrets management">
+<p class="lede">You will add the twist, build the web application and monitoring page, define the evaluation set and release gate, and deploy the assistant on a free hosting service using a free hosted model. This lab is longer than usual; split it over two sittings if needed.</p>
+<h3>Step 1: the twist (worked example: EBOM to MBOM differences)</h3>
+<p>Copy <code>mbom.csv</code> from the data folder into <code>p6-capstone</code>. Add <code>import pandas as pd</code> next to the other imports in <code>bom_server.py</code>, then add this tool above the <code>if __name__ == "__main__":</code> line:</p>
+<pre><code>
+
+MBOM = pd.read_csv("mbom.csv").fillna("")
+
+
+@mcp.tool(annotations=READ_ONLY)
+def bom_differences(assembly: Annotated[str, Field(description="Optional parent assembly, e.g. E3-1100")] = "") -&gt; dict:
+    """Compare the engineering BOM with the manufacturing BOM: parts missing from the MBOM,
+    quantity differences, and items that exist only in the MBOM. Optionally for one assembly."""
+    e = plmtools.EBOM.groupby(["parent", "part_no"]).qty.sum().rename("ebom_qty")
+    m = MBOM.groupby(["parent", "part_no"]).qty.sum().rename("mbom_qty")
+    both = pd.concat([e, m], axis=1).reset_index()
+    if assembly:
+        both = both[both.parent == assembly.strip().upper()]
+
+    def rows(df):
+        return [{k: (int(v) if isinstance(v, float) and v == v else (None if v != v else v))
+                 for k, v in r.items()} for r in df.to_dict("records")]
+
+    return {"missing_in_mbom": rows(both[both.mbom_qty.isna()]),
+            "only_in_mbom": rows(both[both.ebom_qty.isna()]),
+            "quantity_differences": rows(both[both.ebom_qty.notna() &amp; both.mbom_qty.notna()
+                                              &amp; (both.ebom_qty != both.mbom_qty)])}</code></pre>
+<p>This is your Part 1 BOM checker, now available to any MCP host. Test it in the Inspector, then confirm the results match what you found in Unit 3: three parts missing from the MBOM, two quantity differences and four MBOM-only items. If you chose a different twist, build it now in the same way: an MCP tool with a clear description and an honest annotation.</p>
+<h3>Step 2: the evaluation set</h3>
+<pre><code>import json
+tasks = [
+ {"id": "bom-1", "question": "Which assemblies use bolt E3-9001 and how many are in one vehicle?", "must": ["E3-1100", "E3-2000", "24"]},
+ {"id": "bom-2", "question": "Who supplies the windshield glass?", "must": ["ClearView"]},
+ {"id": "bom-3", "question": "How many months of production does our E3-2400 stock cover?", "must": ["0.4"]},
+ {"id": "doc-1", "question": "What torque applies to the M10 main frame bolts?", "must": ["45"]},
+ {"id": "doc-2", "question": "How often must torque wrenches be calibrated?", "must": ["6 months|six months"]},
+ {"id": "chg-1", "question": "What is the status of ECN-2026-0139 and why is it needed?", "must": ["review", "fatigue|crack"]},
+ {"id": "act-1", "question": "Draft a change request to replace headlamp E3-6300 with an LED headlamp because of poor night visibility.", "must": ["E3-6300"], "expects_draft": True},
+ {"id": "out-1", "question": "What is the paint colour of the export variant?", "must": ["not find|no information|not available|could not|cannot find"]},
+]
+json.dump(tasks, open("capstone_eval.json", "w"), indent=1)</code></pre>
+<pre><code>import json
+tasks = json.load(open("capstone_eval.json"))
+tasks.append({"id": "twist-1", "question": "Which parts of the engineering BOM are missing from the manufacturing BOM?",
+              "must": ["E3-3400", "E3-4410", "E3-6400"]})
+json.dump(tasks, open("capstone_eval.json", "w"), indent=1)
+print(len(tasks), "tasks")</code></pre>
+<p>Nine tasks: BOM questions, document questions, a change question, a draft action that must be queued (not executed), a question that must be declined, and the twist. Add a second twist task of your own.</p>
+<h3>Step 3: the release gate</h3>
+<pre><code>%%writefile gate.py
+"""Release gate: run the evaluation through the capstone agent and fail if a threshold is missed.
+Run before every deployment: python gate.py"""
+import asyncio
+import datetime
+import json
+import os
+import re
+import sys
+import pandas as pd
+import capstone_agent as ca
+
+THRESHOLDS = {"task_success": 0.75, "grounded": 0.9, "mean_seconds": 30.0}
+
+
+def has_all(text, must):
+    text = text.lower()
+    return all(any(alt.lower() in text for alt in item.split("|")) for item in must)
+
+
+def grounded(answer, trace):
+    """Every number of 3 or more digits in the answer appears in some tool result."""
+    results = " ".join(t["result"] for t in trace).replace(",", "")
+    nums = [n.replace(",", "") for n in re.findall(r"\d[\d,]*(?:\.\d+)?", answer)]
+    return all(n in results for n in nums if len(n) &gt;= 3)
+
+
+async def main():
+    rows = []
+    for t in json.load(open("capstone_eval.json")):
+        out = await ca.ask(t["question"])
+        text = out["answer"] + " " + json.dumps(out["pending"])
+        rows.append({"id": t["id"],
+                     "success": has_all(text, t["must"]) and bool(out["pending"]) == t.get("expects_draft", False),
+                     "grounded": grounded(out["answer"], out["trace"]),
+                     "steps": out["steps"], "tokens": out["tokens"], "seconds": out["seconds"]})
+    df = pd.DataFrame(rows)
+    print(df.to_string(index=False))
+    summary = {"time": datetime.datetime.now().isoformat(timespec="seconds"), "model": ca.CHAT_MODEL,
+               "task_success": round(float(df.success.mean()), 3), "grounded": round(float(df.grounded.mean()), 3),
+               "mean_seconds": round(float(df.seconds.mean()), 1), "mean_tokens": round(float(df.tokens.mean()))}
+    pd.DataFrame([summary]).to_csv("eval_history.csv", mode="a", index=False,
+                                   header=not os.path.exists("eval_history.csv"))
+    failed = [k for k in ("task_success", "grounded") if summary[k] &lt; THRESHOLDS[k]]
+    if summary["mean_seconds"] &gt; THRESHOLDS["mean_seconds"]:
+        failed.append("mean_seconds")
+    print("\n", summary)
+    if failed:
+        print("GATE FAILED on:", failed)
+        sys.exit(1)
+    print("GATE PASSED")
+
+
+asyncio.run(main())</code></pre>
+<pre><code>!python gate.py</code></pre>
+<p>The gate runs every task through the real agent and servers, checks required facts, checks that the draft task produced a pending action and the others did not, checks that every number of three or more digits in an answer appears in a tool result, and appends a summary to <code>eval_history.csv</code>. It exits with an error if a threshold is missed. Run it on your local model and on the hosted model, and keep both rows in the history.</p>
+<h3>Step 4: the web application</h3>
+<pre><code>%%writefile app.py
+"""Capstone web app: chat with the Sahyadri engineering assistant, approve drafts, give feedback."""
+import asyncio
+import json
+import streamlit as st
+import capstone_agent as ca
+
+st.set_page_config(page_title="Sahyadri engineering assistant", layout="wide")
+st.title("Sahyadri engineering assistant")
+st.caption("Capstone demo on synthetic data. Answers come from MCP servers over the part master, "
+           "BOM, engineering changes and controlled documents. Draft actions need your approval.")
+
+if "turns" not in st.session_state:
+    st.session_state.turns = []
+
+for i, t in enumerate(st.session_state.turns):
+    st.chat_message("user").markdown(t["question"])
+    with st.chat_message("assistant"):
+        st.markdown(t["answer"])
+        with st.expander(f'Trace: {len(t["trace"])} tool calls, {t["tokens"]} tokens, {t["seconds"]} s'):
+            for s in t["trace"]:
+                st.code(f'{s["tool"]}({json.dumps(s["args"])})\n-&gt; {s["result"][:300]}')
+        for j, action in enumerate(t["pending"]):
+            key = f"{i}-{j}"
+            st.info(f'Proposed action: {action["tool"]} {json.dumps(action["args"])}')
+            if key in st.session_state.get("done", {}):
+                st.success(st.session_state.done[key])
+            elif st.button("Approve and create the draft", key=f"approve-{key}"):
+                result = asyncio.run(ca.approve(action, approver="demo user"))
+                st.session_state.setdefault("done", {})[key] = "Draft created. " + result[:200]
+                st.rerun()
+        up, down, _ = st.columns([1, 1, 10])
+        if up.button("👍", key=f"up-{i}"):
+            ca.log_usage({"event": "feedback", "question": t["question"], "score": 1})
+            st.toast("Thanks for the feedback")
+        if down.button("👎", key=f"down-{i}"):
+            ca.log_usage({"event": "feedback", "question": t["question"], "score": -1})
+            st.toast("Thanks. This question will be reviewed.")
+
+if question := st.chat_input("Ask about parts, BOMs, changes or standards"):
+    with st.spinner("Working through the tools..."):
+        st.session_state.turns.append(asyncio.run(ca.ask(question)))
+    st.rerun()</code></pre>
+<p>Pending actions appear with an approval button; nothing is drafted until someone clicks it, and the approval is logged. Every answer has a trace and feedback buttons. In a company deployment, the approver's name would come from the user's sign-in rather than "demo user".</p>
+<h3>Step 5: the monitoring page</h3>
+<p>Streamlit treats files in a <code>pages</code> folder as extra pages of the same app.</p>
+<pre><code>import os
+os.makedirs("pages", exist_ok=True)</code></pre>
+<pre><code>%%writefile pages/monitor.py
+"""Monitoring page: usage, speed, cost, feedback and evaluation history."""
+import json
+import os
+import pandas as pd
+import streamlit as st
+
+st.title("Monitoring")
+if not os.path.exists("usage.jsonl"):
+    st.info("No usage yet.")
+    st.stop()
+
+rows = [json.loads(line) for line in open("usage.jsonl")]
+df = pd.DataFrame(rows)
+df["time"] = pd.to_datetime(df["time"])
+questions = df[df.get("event").isna()] if "event" in df else df
+feedback = df[df.get("event") == "feedback"] if "event" in df else df.iloc[0:0]
+
+c = st.columns(4)
+c[0].metric("Questions", len(questions))
+c[1].metric("Median seconds", f'{questions["seconds"].median():.1f}' if len(questions) else "-")
+c[2].metric("Tokens per question", f'{questions["tokens"].mean():.0f}' if len(questions) else "-")
+c[3].metric("Thumbs up share", f'{(feedback["score"] &gt; 0).mean():.0%}' if len(feedback) else "-")
+
+if len(questions):
+    daily = questions.set_index("time").resample("D").agg({"question": "count", "seconds": "median", "tokens": "mean"})
+    st.subheader("Per day")
+    st.line_chart(daily)
+    st.subheader("Tools used")
+    st.bar_chart(questions.explode("tools")["tools"].value_counts())
+if len(feedback):
+    st.subheader("Questions with negative feedback")
+    st.dataframe(feedback[feedback["score"] &lt; 0][["time", "question"]])
+if os.path.exists("eval_history.csv"):
+    st.subheader("Evaluation history")
+    st.dataframe(pd.read_csv("eval_history.csv").tail(10))</code></pre>
+<p>Run <code>streamlit run app.py</code> locally, ask ten questions, approve one draft, give some feedback, and open the Monitor page in the sidebar.</p>
+<h3>Step 6: deploy</h3>
+<pre><code>%%writefile requirements.txt
+mcp&gt;=2
+openai
+ollama
+chromadb
+fastembed
+pandas
+numpy
+pydantic
+matplotlib
+streamlit</code></pre>
+<ol>
+<li>Run <code>python fingerprint.py</code> (copy it from <code>p5-mcp</code>), review <code>server_manifest.md</code> including your twist, and record the approved fingerprints.</li>
+<li>Run <code>python gate.py</code> with the hosted model settings from Unit 24. Deploy only if it passes.</li>
+<li>Create a new public GitHub repository, for example <code>sahyadri-assistant</code>, and push the contents of <code>p6-capstone</code>. Add a <code>.gitignore</code> containing <code>chroma_db_*</code>, <code>*.jsonl</code>, <code>drafts/</code>, <code>audit/</code> and <code>__pycache__/</code>. Check that no API key is in any file.</li>
+<li>On <a href="https://share.streamlit.io" target="_blank" rel="noopener">Streamlit Community Cloud</a>, create an app from the repository with main file <code>app.py</code>. Under Advanced settings, choose Python 3.12 and paste your settings into Secrets:</li>
+</ol>
+<pre><code>LLM_BACKEND = "openai"
+LLM_BASE_URL = "https://api.groq.com/openai/v1"
+LLM_MODEL = "llama-3.3-70b-versatile"
+LLM_API_KEY = "your-key-here"
+EMBED_BACKEND = "local"</code></pre>
+<p>Streamlit makes top-level secrets available as environment variables, which <code>providers.py</code> reads. The first question after a start takes longer while the documents server downloads the embedding model and builds its index. Logs on the free service are lost when the app restarts; that is acceptable for a demo, and your README should say how production logging would differ.</p>
+<h3>Step 7: README and evidence</h3>
+<p>Your <code>README.md</code> is the capstone's front page. Include: the user-job sentence, an architecture sketch (host, servers, tools and their permissions, model backends), the gate results for both backends, the twist and its value estimate, a screenshot of a trace and of the Monitor page, the limitations, and the link to the live app. Record a three-minute video walking through one answer, one approval and the Monitor page.</p>
+<h3>Done when</h3>
+<ul>
+<li>The app is live, uses a hosted model and your MCP servers, and queues draft actions for approval.</li>
+<li>The release gate passes on the deployed configuration, with the result in <code>eval_history.csv</code>.</li>
+<li>The twist has evaluation tasks, reviewed tool fingerprints and a value estimate.</li>
+<li>The README and video are complete, and Project 6 is marked shipped on the Projects page.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="a"><p>What does the gate check for the draft task?</p><ol><li data-o="a">That the action was queued as pending, not executed, along with the required facts</li><li data-o="b">That a draft file was written</li><li data-o="c">That the model refused</li></ol><p class="why">Testing the approval design, not just the answer.</p></div>
+<div class="q" data-a="c"><p>Why must chroma_db folders and logs stay out of the repository?</p><ol><li data-o="a">They are too small</li><li data-o="b">Streamlit cannot read them</li><li data-o="c">They are generated, may hold usage data, and the index is rebuilt for the embedder in use</li></ol><p class="why">Commit sources, not runtime state.</p></div>
+</div>
+</article>
+
+<article data-id="m6w25d3" data-type="case" data-title="Case: the trade-show demo" data-mins="75" data-watch="presales demo best practices" data-read="Your capstone README">
+<p class="lede">Marketing wants a spectacular AI demo for a trade show in three weeks. You have a working, honest capstone. How do you serve both?</p>
+<h3>The situation</h3>
+<p>Your sales director asks for an AI demo at a manufacturing trade show in Pune: "Something that wows: voice, 3D, the AI redesigning a part live. Visitors spend three minutes at the booth." A colleague proposes a scripted video that shows an assistant "autonomously" releasing an engineering change and ordering parts, with no human in the loop. You have your capstone: real tools, real traces, approval steps and an evaluation history.</p>
+<h3>Your questions</h3>
+<ol>
+<li>What are the risks of the scripted autonomous video?</li>
+<li>Design a three-minute live demo from your capstone that is honest and memorable.</li>
+<li>What do you prepare for the visitors who are seriously interested?</li>
+<li>How do you measure whether the booth worked?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> It promises something customers' engineering and quality departments will not accept (autonomous release), so it attracts the wrong expectations and loses credibility with the people who decide. If it is scripted but presented as live, it is misleading. And it differentiates nothing: every vendor's video looks like that.</p>
+<p><strong>2.</strong> A visitor asks a question in their own words, for example "what is affected if we change the motor mount bolt?". The screen shows the trace filling in: where-used, stock, the standard, the change notice. Then the assistant proposes a draft change request, and the visitor presses Approve. Close with one slide: "every fact traced, every action approved, tested on every release." Optional: the MBOM twist on a large screen, highlighting differences in the BOM tree.</p>
+<p><strong>3.</strong> A one-page leave-behind: the stage plan (Unit 22), the MCP control set (Unit 21) and the offer of a 6-week proof on their own closed changes (Unit 17). A QR code to the live app on synthetic data, and a short form to book a workshop.</p>
+<p><strong>4.</strong> Workshop requests and qualified follow-ups, not visitor counts. Note which questions visitors asked; they are free market research for your evaluation set and talk track.</p>
+<p><strong>What the case teaches.</strong> An honest demo of a controlled system is memorable precisely because it is different, and it attracts the customers who will buy.</p>
+</details>
+</article>
+
+<article data-id="m6w25d4" data-type="review" data-title="Unit 25 review and work assignment" data-mins="60" data-watch="AI product launch checklist" data-read="Key ideas page, Part 6">
+<p class="lede">Six questions on shipping, then a peer review of your capstone.</p>
+<div class="quiz graded">
+<div class="q" data-a="d"><p>Which evidence is most convincing in a capstone review?</p><ol><li data-o="a">The number of features</li><li data-o="b">The size of the model</li><li data-o="c">A polished logo</li><li data-o="d">Traces, approval steps, gate results, monitoring and stated limitations</li></ol><p class="why">Evidence over features.</p></div>
+<div class="q" data-a="b"><p>Before deploying a new version, you should:</p><ol><li data-o="a">Delete the logs</li><li data-o="b">Run the release gate and the fingerprint check, and deploy only if both pass</li><li data-o="c">Switch to the newest model</li><li data-o="d">Disable approvals</li></ol><p class="why">Gate every release.</p></div>
+<div class="q" data-a="a"><p>Why are servers given only EMBED_BACKEND and the role, not the API key?</p><ol><li data-o="a">Least privilege: servers do not need the key, so a compromised server cannot leak it</li><li data-o="b">Environment variables are expensive</li><li data-o="c">MCP forbids keys</li><li data-o="d">To make them faster</li></ol><p class="why">Give each component only what it needs.</p></div>
+<div class="q" data-a="c"><p>In the trade-show case, the main problem with the scripted autonomous video was:</p><ol><li data-o="a">Video quality</li><li data-o="b">Cost</li><li data-o="c">It promised something decision-makers will not accept and could mislead</li><li data-o="d">It was too short</li></ol><p class="why">Honesty is also good marketing.</p></div>
+<div class="q" data-a="b"><p>Where do the app's settings, such as the API key, live on Streamlit Community Cloud?</p><ol><li data-o="a">In app.py</li><li data-o="b">In the app's Secrets settings</li><li data-o="c">In requirements.txt</li><li data-o="d">In the README</li></ol><p class="why">Secrets never in code.</p></div>
+<div class="q" data-a="d"><p>A good twist definition of done includes:</p><ol><li data-o="a">A new model</li><li data-o="b">A press release</li><li data-o="c">More servers</li><li data-o="d">Evaluation tasks, a passing gate, reviewed fingerprints and a value estimate</li></ol><p class="why">Same standards as the rest.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: peer review</h3>
+<p>Share your live app link with a colleague who knows the domain. Ask them to try five questions of their own and to try to make it do something it should not. Add their questions to your evaluation set, fix what you can, re-run the gate and redeploy. Note what you changed in the README.</p></div>
+</article>
+
+</section>
+
+<section data-week="26" data-title="Playbook, pitch and leading AI initiatives" data-goal="Write your PoC-to-production playbook, deliver a 15-minute pitch, and leave with a plan for leading AI initiatives in your role.">
+
+<article data-id="m6w26d1" data-type="lesson" data-title="Leading AI initiatives" data-mins="85" data-watch="building an AI center of excellence; AI governance frameworks ISO 42001 NIST explained" data-read="NIST AI Risk Management Framework, core functions overview; ISO/IEC 42001 summary (iso.org); EU AI Act, high-level summary of risk categories">
+<p class="lede">Your first goal for this course was to scale AI from proof of concept to production and lead AI initiatives. This last lesson covers the organisation around the technology: roles, operating model, governance and adoption.</p>
+<h3>The roles in a scaled AI initiative</h3>
+<table class="stmt">
+<thead><tr><th>Role</th><th>Responsible for</th></tr></thead>
+<tbody>
+<tr><td>Business owner</td><td>The KPI, the budget, the go or stop decisions</td></tr>
+<tr><td>Product owner</td><td>Users, priorities, the evaluation set's coverage of real needs</td></tr>
+<tr><td>AI engineer</td><td>Prompts, agents, retrieval, evaluation and the release gate</td></tr>
+<tr><td>Integration engineer</td><td>MCP servers, PLM and ERP access, identity</td></tr>
+<tr><td>Security and compliance</td><td>Reviews, controls, incident response</td></tr>
+<tr><td>Change lead</td><td>Training, process changes, champions, adoption metrics</td></tr>
+<tr><td>Domain experts</td><td>Correct answers for the evaluation set; review of drafts</td></tr>
+</tbody>
+</table>
+<p>In presales, you often play a mix of product owner and solution architect. Knowing the whole cast lets you ask, early, "who will play each role at your company?", a question that predicts success better than any technical one.</p>
+<h3>Operating models</h3>
+<ul>
+<li><strong>Centralised</strong>: one AI team builds everything. Consistent, but becomes a bottleneck.</li>
+<li><strong>Decentralised</strong>: each department builds its own. Fast, but duplicates work and controls (Unit 18's connector sprawl).</li>
+<li><strong>Hub and spoke</strong>: a central team (a centre of excellence) owns the platform, shared MCP servers, evaluation tooling, security patterns and governance; departments build use cases on top with their own owners. Most companies that scale end up here.</li>
+</ul>
+<h3>Governance without paralysis</h3>
+<p>Frameworks give a shared language: the <strong>NIST AI Risk Management Framework</strong> (govern, map, measure, manage), <strong>ISO/IEC 42001</strong> (an AI management system standard that can be certified, structured like ISO 9001), and the <strong>EU AI Act</strong> (obligations by risk category; relevant to Indian companies selling into Europe). Most engineering assistants that draft and inform, with human approval, sit in lower-risk categories; AI that is part of a product's safety function or makes decisions about people sits higher. Practical governance means a register of AI use cases with owners and risk levels, standard controls by risk level, and a light review before each stage gate. You have built most of those controls in this course.</p>
+<h3>Adoption is designed</h3>
+<ul>
+<li>Put the assistant where the work is: inside the PLM, the change form, the shift handover.</li>
+<li>Recruit champions in each team and give them early access and a voice in the evaluation set.</li>
+<li>Train on judgement, not buttons: what to ask, how to read citations and traces, when not to trust an answer.</li>
+<li>Measure weekly active use and act on it; adoption that falls after month two needs investigation, not more features.</li>
+<li>Change incentives where needed: if engineers are measured on hours booked, time saved can feel like a threat.</li>
+</ul>
+<h3>Your playbook</h3>
+<p>This unit you write your own PoC-to-production playbook: the stage gates, the evaluation and release gate, the MCP control set, the operating model and the value case template. It is the document you will use with customers and inside your own company, and the most valuable artefact of this course.</p>
+<div class="callout"><h4>In your job</h4><p>Bring the role table to the first serious meeting about any AI initiative and ask who will fill each role. If nobody owns the KPI or the change management, say so kindly and early. It is the most useful thing a presales consultant can do for a customer's AI success, and customers remember who told them.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>Which operating model do most scaling companies converge on?</p><ol><li data-o="a">Fully decentralised</li><li data-o="b">Hub and spoke, with a central team owning shared platforms and controls</li><li data-o="c">Fully outsourced</li></ol><p class="why">Shared foundations, local use cases.</p></div>
+<div class="q" data-a="c"><p>ISO/IEC 42001 is:</p><ol><li data-o="a">A model benchmark</li><li data-o="b">An Indian data law</li><li data-o="c">A certifiable AI management system standard</li></ol><p class="why">Structured like other ISO management system standards.</p></div>
+<div class="q" data-a="a"><p>Adoption falls after month two. The best first step is:</p><ol><li data-o="a">Investigate with users and logs why, before adding features</li><li data-o="b">Add more features</li><li data-o="c">Switch models</li></ol><p class="why">Understand the cause first.</p></div>
+</div>
+</article>
+
+<article data-id="m6w26d2" data-type="lab" data-title="Lab: your playbook and your pitch" data-mins="150" data-watch="how to structure a business pitch; technical presentation tips" data-read="Your Projects 1 to 6 READMEs, value cases and presales kit">
+<p class="lede">No code this time. You will write the playbook, build and rehearse a 15-minute pitch of your capstone, and take the final exam. These are the deliverables you will reuse most.</p>
+<h3>Step 1: the playbook (about 3 pages)</h3>
+<p>Create <code>playbook.md</code> in your portfolio with these sections. Reuse your earlier work; most of it already exists.</p>
+<ol>
+<li><strong>Use case intake</strong>: the user-job sentence, the scoring from Unit 1, the baseline to measure.</li>
+<li><strong>Stage gates</strong>: PoC, pilot and production, with exit criteria (Unit 22).</li>
+<li><strong>Architecture patterns</strong>: when to use RAG, a workflow, an agent; MCP servers by domain and risk; model deployment options (Units 12, 15, 19 and 24).</li>
+<li><strong>Controls</strong>: autonomy levels and approvals; the MCP control set; the lethal trifecta check (Units 16, 17 and 21).</li>
+<li><strong>Evaluation and operations</strong>: evaluation set rules, release gate, regression comparison, monitoring signals, runbook (Units 13 and 23).</li>
+<li><strong>Value case template</strong>: inputs, conservative and expected cases, payback, NPV, sensitivity (Unit 22).</li>
+<li><strong>Roles and operating model</strong>: the role table and how your company and the customer fill it (this week).</li>
+</ol>
+<h3>Step 2: the pitch (15 minutes)</h3>
+<p>Build about 10 slides around your capstone, aimed at a customer's engineering director and CIO together:</p>
+<table class="stmt">
+<thead><tr><th>Minutes</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td class="n">2</td><td>The problem in their words, with the baseline numbers</td></tr>
+<tr><td class="n">4</td><td>Live demo: a traced answer, an approved draft, the twist</td></tr>
+<tr><td class="n">3</td><td>How it is controlled: servers and permissions, approvals, the gate, monitoring</td></tr>
+<tr><td class="n">3</td><td>Value case: conservative case, break-even assumption, tornado chart</td></tr>
+<tr><td class="n">2</td><td>The plan: stage gates, roles needed from them, the 6-week proof offer</td></tr>
+<tr><td class="n">1</td><td>The ask: one decision you want from them</td></tr>
+</tbody>
+</table>
+<p>Rehearse twice with a timer, record the second run, and watch it once. Cut anything that does not help the decision.</p>
+<h3>Step 3: final checks</h3>
+<ul>
+<li>All six projects are marked shipped on the Projects page, each with a README.</li>
+<li>Your presales kit contains the talk track, use-case library, value case template, MCP control set, security slide, stage plan and operating model.</li>
+<li>Take the final exam on the Exams page (50 questions).</li>
+</ul>
+<h3>Done when</h3>
+<ul>
+<li><code>playbook.md</code> has all seven sections.</li>
+<li>The pitch is recorded at 15 minutes or less.</li>
+<li>The final exam is complete, and you have noted the topics to revisit.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why end the pitch with one specific ask?</p><ol><li data-o="a">To shorten the meeting</li><li data-o="b">So the meeting ends with a decision, such as approving a 6-week proof</li><li data-o="c">Because slides run out</li></ol><p class="why">Pitches exist to produce decisions.</p></div>
+<div class="q" data-a="a"><p>Why show the conservative value case and the break-even assumption?</p><ol><li data-o="a">They make the case credible and tell the customer what the pilot must prove</li><li data-o="b">They are required by law</li><li data-o="c">They are the largest numbers</li></ol><p class="why">Credible numbers build trust.</p></div>
+</div>
+</article>
+
+<article data-id="m6w26d3" data-type="case" data-title="Case: the board asks for an AI roadmap" data-mins="90" data-watch="AI strategy roadmap board presentation" data-read="Your Unit 22 portfolio case and playbook">
+<p class="lede">The final case brings the whole course together. Sahyadri's board wants a three-year AI roadmap, and the CEO asks you, as the trusted partner, to help shape it.</p>
+<h3>The situation</h3>
+<p>Two years into its AI journey, Sahyadri has the document copilot and the change impact agent in production, MCP servers for parts, BOMs, changes and documents, and a small central AI team of four. The board has set aside ₹6 crore over three years and asks for a roadmap that "makes us an AI-enabled manufacturer, not a company with AI projects". Candidate initiatives:</p>
+<table class="stmt">
+<thead><tr><th>Initiative</th><th>Estimated annual value</th><th>One-time cost</th><th>Readiness</th></tr></thead>
+<tbody>
+<tr><td>Copilot and change agent to Hosur and suppliers</td><td>₹1.2 crore</td><td>₹80 lakh</td><td>High: platform exists</td></tr>
+<tr><td>Predictive maintenance on all press and paint lines</td><td>₹1.5 crore</td><td>₹1.4 crore</td><td>Medium: needs live sensor data</td></tr>
+<tr><td>Visual inspection: welds and paint</td><td>₹1.1 crore</td><td>₹1.2 crore</td><td>Medium: lighting and labelling</td></tr>
+<tr><td>MBOM generation and reconciliation agent</td><td>₹70 lakh</td><td>₹50 lakh</td><td>High: MCP servers exist</td></tr>
+<tr><td>Generative design for next-generation chassis</td><td>₹2 crore (weight and material)</td><td>₹90 lakh</td><td>Medium: needs simulation capacity and skills</td></tr>
+<tr><td>Customer-facing fleet assistant (vehicle data, service)</td><td>Unclear</td><td>₹1.5 crore</td><td>Low: personal and vehicle data, no owner</td></tr>
+</tbody>
+</table>
+<h3>Your questions</h3>
+<ol>
+<li>Select initiatives within ₹6 crore and sequence them across three years. Justify the order.</li>
+<li>What must the central AI team build or own to make this "AI-enabled", not a collection of projects?</li>
+<li>Name the three biggest risks to the roadmap and how you would manage each.</li>
+<li>Propose five KPIs the board should see every quarter.</li>
+<li>Write the one-paragraph summary for the board.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Year 1: copilot and agent rollout (₹80 lakh, high readiness, builds on what works) and the MBOM agent (₹50 lakh, uses existing servers). Start the data foundations for maintenance: live sensor data on two press lines. Year 2: predictive maintenance across lines (₹1.4 crore), once live data exists, and generative design for the new chassis (₹90 lakh), timed with the vehicle programme. Year 3: visual inspection for welds and paint (₹1.2 crore), after lighting and labelling standards are fixed in year 2. Total one-time: about ₹4.8 crore, leaving about ₹1.2 crore for the central platform, the year-1 sensor data foundation and contingency. The fleet assistant is deferred until it has an owner, a privacy assessment and a clearer value case.</p>
+<p><strong>2.</strong> The shared platform and controls: MCP servers for each core system with per-user identity; the evaluation and release-gate tooling; monitoring and logging; the model deployment options and routing; the use-case register with stage gates; training and a champions network. Each initiative reuses these, so the cost and time of the next use case fall.</p>
+<p><strong>3.</strong> Data readiness for maintenance and vision (manage with year-1 data foundation work and explicit readiness gates). Adoption beyond the early users (manage with a change lead, champions and weekly-use KPIs per site). Skills and dependency on four people (manage with hub-and-spoke: train domain engineers as builders, document patterns in the playbook, partner where needed).</p>
+<p><strong>4.</strong> Realised value against the conservative case per initiative; weekly active users per site; evaluation pass rates and incidents; time from idea to production for new use cases (falling as the platform matures); share of initiatives meeting their stage-gate criteria on time.</p>
+<p><strong>5.</strong> "We will scale what already works first, the document copilot and change agent, to Hosur and our suppliers, and add an MBOM agent on the same foundations. In parallel we build the live data needed for predictive maintenance and visual inspection, which follow in years two and three, together with generative design for the next chassis. A small central team owns the shared platform, controls and measurement, so each new use case is faster and safer than the last. We will report realised value, adoption and quality every quarter, and stop anything that does not meet its stage gates."</p>
+<p><strong>What the case teaches.</strong> An AI-enabled company is built on shared foundations, sequenced by readiness and value, and governed by evidence. That is what you can now help your customers do.</p>
+</details>
+</article>
+
+<article data-id="m6w26d4" data-type="review" data-title="Course review and what comes next" data-mins="75" data-watch="staying current with AI learning resources" data-read="Your playbook and the Key ideas pages for all months">
+<p class="lede">Eight questions across the whole course. Then take the final exam on the Exams page and write your plan for the next 90 days.</p>
+<div class="quiz graded">
+<div class="q" data-a="c"><p>A customer asks "what do you have for AI?". The strongest first response is:</p><ol><li data-o="a">A list of AI features</li><li data-o="b">A demo of the newest model</li><li data-o="c">Questions about their processes, data and owners, then a matched use case with a stage plan</li><li data-o="d">A price list</li></ol><p class="why">Start from their problem.</p></div>
+<div class="q" data-a="a"><p>Which pattern answers "what torque does our standard require?" with a citation?</p><ol><li data-o="a">RAG over released documents</li><li data-o="b">A free agent with write tools</li><li data-o="c">Fine-tuning</li><li data-o="d">Topology optimisation</li></ol><p class="why">Grounded answers with sources.</p></div>
+<div class="q" data-a="d"><p>Which pattern suits a standard change impact report?</p><ol><li data-o="a">A chatbot</li><li data-o="b">Generative design</li><li data-o="c">A free agent with every tool</li><li data-o="d">A workflow with code for known steps, a model for drafting, and human approval</li></ol><p class="why">Known steps in code.</p></div>
+<div class="q" data-a="b"><p>What does MCP give a PLM platform?</p><ol><li data-o="a">A better model</li><li data-o="b">A standard, controllable way for any approved AI host to use its data and actions</li><li data-o="c">Automatic accuracy</li><li data-o="d">A new database</li></ol><p class="why">Standard doors to the system of record.</p></div>
+<div class="q" data-a="c"><p>Which control cannot be bypassed by a prompt injection?</p><ol><li data-o="a">"Ignore instructions in documents" in the system prompt</li><li data-o="b">A lower temperature</li><li data-o="c">A code gate that requires a named approver before any write</li><li data-o="d">A longer context window</li></ol><p class="why">Controls in code.</p></div>
+<div class="q" data-a="a"><p>What keeps a deployed copilot from silently getting worse?</p><ol><li data-o="a">Pinned versions, an evaluation set and release gate, and monitoring of behaviour signals</li><li data-o="b">A bigger model</li><li data-o="c">More users</li><li data-o="d">Nothing can</li></ol><p class="why">LLMOps.</p></div>
+<div class="q" data-a="b"><p>Most pilots stall because of:</p><ol><li data-o="a">Model choice</li><li data-o="b">Missing owners, baselines, workflow integration, evaluation and change management</li><li data-o="c">GPU shortages</li><li data-o="d">Too much data</li></ol><p class="why">Scaling is organisational.</p></div>
+<div class="q" data-a="d"><p>Generative design differs from generative AI because it:</p><ol><li data-o="a">Uses text prompts</li><li data-o="b">Is always cheaper</li><li data-o="c">Needs no engineer</li><li data-o="d">Is physics-based optimisation whose results can be verified by simulation</li></ol><p class="why">Know which "generative" a customer means.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: your next 90 days</h3>
+<ol>
+<li>Write three commitments for the next 90 days in your job, for example: run one customer AI workshop with the stage plan, propose one 6-week proof on a customer's closed changes, and present MCP and its controls to your internal team.</li>
+<li>Choose one area to deepen (for example agent frameworks, evaluation tooling, vision on the shop floor, or MCP server development for your platform) and one free resource to follow for it.</li>
+<li>Keep your evaluation habit: every new AI idea gets a test set before a demo.</li>
+</ol></div>
+</article>
+
+</section>

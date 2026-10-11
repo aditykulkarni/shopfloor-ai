@@ -1,0 +1,47 @@
+part_no,description,parent,qty,make_buy
+E3-0000,Electric cargo three-wheeler,,1,make
+E3-1000,Chassis assembly,E3-0000,1,make
+E3-1100,Main frame weldment,E3-1000,1,make
+E3-1110,Frame long member,E3-1100,2,make
+E3-1120,Frame cross member,E3-1100,4,make
+E3-1130,Mounting bracket,E3-1100,8,make
+E3-9001,Bolt M10x40,E3-1100,16,buy
+E3-9002,Nut M10,E3-1100,16,buy
+E3-1200,Front suspension,E3-1000,1,make
+E3-1210,Front fork,E3-1200,1,buy
+E3-1220,Shock absorber,E3-1200,1,buy
+E3-1300,Rear axle assembly,E3-1000,1,make
+E3-1310,Axle beam,E3-1300,1,make
+E3-1320,Leaf spring,E3-1300,2,buy
+E3-1400,Wheel assembly,E3-1000,3,make
+E3-1410,Rim,E3-1400,1,buy
+E3-1420,Tyre,E3-1400,1,buy
+E3-2000,Powertrain assembly,E3-0000,1,make
+E3-2100,Traction motor,E3-2000,1,buy
+E3-2200,Motor controller,E3-2000,1,buy
+E3-2300,Differential,E3-2000,1,buy
+E3-2400,Motor mount bracket,E3-2000,2,make
+E3-9001,Bolt M10x40,E3-2000,8,buy
+E3-9002,Nut M10,E3-2000,8,buy
+E3-3000,Battery pack assembly,E3-0000,1,make
+E3-3100,Cell module,E3-3000,4,make
+E3-3110,Li-ion cell 21700,E3-3100,24,buy
+E3-3200,Battery management board,E3-3000,1,buy
+E3-3300,Battery enclosure,E3-3000,1,make
+E3-3400,Busbar,E3-3000,6,buy
+E3-4000,Cabin assembly,E3-0000,1,make
+E3-4100,Cabin shell,E3-4000,1,make
+E3-4200,Windshield glass,E3-4000,1,buy
+E3-4300,Driver seat,E3-4000,1,buy
+E3-4400,Dashboard assembly,E3-4000,1,make
+E3-4410,Instrument cluster,E3-4400,1,buy
+E3-5000,Cargo body assembly,E3-0000,1,make
+E3-5100,Cargo floor panel,E3-5000,1,make
+E3-5200,Cargo side panel,E3-5000,2,make
+E3-5300,Tail gate,E3-5000,1,make
+E3-5400,Hinge,E3-5000,4,buy
+E3-6000,Electrical harness kit,E3-0000,1,make
+E3-6100,Main wiring harness,E3-6000,1,buy
+E3-6200,Lighting harness,E3-6000,1,buy
+E3-6300,Headlamp,E3-6000,2,buy
+E3-6400,Tail lamp,E3-6000,2,buy

@@ -1,0 +1,6 @@
+change_id,title,class,status,affected_parts,reason,owner,created
+ECN-2026-0131,Second source for Li-ion cell,A,released,E3-3110;E3-3100,Supply risk: CellCo lead time 22 weeks,Hosur ME,2026-06-02
+ECN-2026-0139,Thicker motor mount bracket,B,in review,E3-2400;E3-2401,Fatigue cracks in 3 warranty claims,Priya Deshmukh,2026-08-20
+ECN-2026-0147,Longer bolts for motor mount,B,draft,E3-9001;E3-9003;E3-2000,Thread engagement with 6 mm bracket,Priya Deshmukh,2026-09-08
+ECR-2026-0152,LED headlamp to replace halogen headlamp,,new,E3-6300,Customer complaints about night visibility; fleet customer request,Farhan Shaikh,2026-09-29
+ECR-2026-0155,Change cargo floor panel to 1.6 mm steel,,new,E3-5100,Cost reduction of 410 rupees per vehicle; weight saving 3.1 kg,Anjali Rao,2026-10-02

@@ -1,0 +1,369 @@
+<section data-week="1" data-title="A map of AI for engineers" data-goal="Explain AI, machine learning, deep learning and generative AI in customer language, and run your first Python.">
+
+<article data-id="m1w1d1" data-type="lesson" data-title="AI, ML, deep learning and GenAI: one map" data-mins="75" data-watch="AI vs machine learning vs deep learning vs generative AI explained" data-read="Python for Everybody (book), chapter 1, why should you learn to write programs">
+<p class="lede">Customers use "AI" to mean anything from an Excel macro to a chatbot. This session gives you one map you can draw on a whiteboard, so every later session has a place to sit.</p>
+<h3>Rules versus learning</h3>
+<p>Every piece of software turns inputs into outputs. The question is who writes the rule. In traditional software a person writes it: "if the torque exceeds 60 N·m, raise an alarm". In machine learning the computer finds the rule from examples: you show it ten thousand past readings, each labelled "failed" or "did not fail", and it works out which combinations of torque, speed and temperature come before a failure.</p>
+<p>That is the whole idea. Machine learning is useful when the rule exists but is too complicated, too fuzzy or too changeable for a person to write down, and when you have enough labelled history for the computer to find it.</p>
+<h3>The four nested circles</h3>
+<table class="stmt">
+<thead><tr><th>Term</th><th>What it means</th><th>Manufacturing example</th></tr></thead>
+<tbody>
+<tr><td>Artificial intelligence</td><td>Any system that does something we would call intelligent if a person did it. Includes hand-written rules.</td><td>An expert system that checks a weld schedule against a rule book</td></tr>
+<tr><td>Machine learning</td><td>Systems that learn patterns from data instead of being given rules.</td><td>Predicting machine failure from sensor history</td></tr>
+<tr><td>Deep learning</td><td>Machine learning with neural networks of many layers. Very good with images, sound and text.</td><td>Spotting cracks in castings from camera images</td></tr>
+<tr><td>Generative AI</td><td>Deep learning models that produce new content: text, images, code, 3D shapes.</td><td>A copilot that drafts a work instruction from a process plan</td></tr>
+</tbody>
+</table>
+<p>Each circle sits inside the one above. Generative AI is a kind of deep learning, which is a kind of machine learning, which is a kind of AI. When a customer asks "do you have AI?", it helps to ask which circle they mean.</p>
+<h3>What kind of data, what kind of AI</h3>
+<p>The type of data decides the type of model far more than the industry does. Manufacturing has all five kinds:</p>
+<ul>
+<li><strong>Tables</strong>: BOMs, routings, quality records, ERP transactions. Classic machine learning (Part 2) works best here.</li>
+<li><strong>Time series</strong>: sensor streams from machines, energy meters, test rigs. Machine learning with features built from time windows.</li>
+<li><strong>Images and video</strong>: inspection cameras, weld seams, drawings. Deep learning (Part 3).</li>
+<li><strong>Text</strong>: change notices, work instructions, service reports, RFPs. Large language models (Parts 4 and 5).</li>
+<li><strong>3D geometry and simulation</strong>: CAD models, meshes, factory flow models. Generative design and simulation surrogates (Part 3 and the capstone).</li>
+</ul>
+<h3>Three things AI needs, in this order</h3>
+<ol>
+<li><strong>A decision worth improving.</strong> Someone has to act differently because of the output: stop a machine, reject a part, approve a change faster.</li>
+<li><strong>Data that describes past cases.</strong> Enough of it, correct enough, and connected to the outcome you care about.</li>
+<li><strong>A model.</strong> Usually the easiest part, and often a standard one.</li>
+</ol>
+<p>Most failed AI projects start at step 3. Most successful ones start at step 1. You will see this pattern in almost every case study in this course.</p>
+<div class="callout"><h4>In your job</h4><p>When a prospect asks "what do you have for AI?", answer with a question from step 1: "Which decision costs you the most today?" A design manager will say change approvals. A plant head will say unplanned downtime. A quality head will say escapes to the customer. Each answer points to a different circle on the map and a different data source on your platform.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>A plant writes a rule: "if spindle temperature exceeds 85 °C, stop the machine". Is this machine learning?</p><ol><li data-o="a">Yes, because a computer applies it</li><li data-o="b">No, because a person wrote the rule rather than the computer learning it from data</li><li data-o="c">Yes, because it uses sensor data</li></ol><p class="why">Machine learning means the rule is learned from examples. A hand-written threshold is ordinary automation, which still counts as AI only in the widest sense.</p></div>
+<div class="q" data-a="c"><p>Which of these is generative AI?</p><ol><li data-o="a">A model that classifies castings as OK or defective</li><li data-o="b">A model that predicts remaining tool life in minutes</li><li data-o="c">A model that drafts a first version of a work instruction</li></ol><p class="why">Generative models produce new content. Classifying and predicting a number are discriminative tasks.</p></div>
+<div class="q" data-a="a"><p>A customer wants AI to "optimise production" but cannot name a decision that would change. What is the most useful next step?</p><ol><li data-o="a">Find the decision and the person who makes it before talking about models</li><li data-o="b">Propose a deep learning model because it is the most powerful</li><li data-o="c">Ask for all their data and look for patterns</li></ol><p class="why">Without a decision and an owner, even an accurate model changes nothing. Start from the decision.</p></div>
+</div>
+</article>
+
+<article data-id="m1w1d2" data-type="lab" data-title="Lab: first Python in Colab, with parts" data-mins="90" data-watch="python for beginners variables lists dictionaries google colab" data-read="Kaggle Learn Python, lessons 1 to 3; Python for Everybody chapters 2 to 4">
+<p class="lede">You will write about thirty lines of Python that store parts, look them up and print an indented structure. Type the code rather than pasting it. Your fingers learn the syntax faster than your eyes.</p>
+<h3>Set up (10 minutes)</h3>
+<ol>
+<li>Open <a href="https://colab.research.google.com/" target="_blank" rel="noopener">Google Colab</a> and sign in with a Google account.</li>
+<li>Choose File, New notebook. Rename it <code>w01-first-python</code>.</li>
+<li>A notebook is a list of cells. Type code in a cell and press Shift+Enter to run it. The output appears underneath.</li>
+</ol>
+<h3>Step 1: values and variables</h3>
+<pre><code>part_no = "E3-1100"
+description = "Main frame weldment"
+qty = 1
+weight_kg = 38.5
+
+print(part_no, description, qty, weight_kg)
+print(type(part_no), type(qty), type(weight_kg))</code></pre>
+<p>A variable is a name for a value. Text in quotes is a <em>string</em> (<code>str</code>), whole numbers are <code>int</code>, numbers with decimals are <code>float</code>. Python decides the type from what you write.</p>
+<h3>Step 2: a list of things</h3>
+<pre><code>suppliers = ["Pune Castings", "Chakan Fasteners", "Hosur Electricals"]
+print(len(suppliers))
+print(suppliers[0])     # counting starts at 0
+suppliers.append("Nashik Rubber")
+for s in suppliers:
+    print("Supplier:", s)</code></pre>
+<p>A list keeps items in order. <code>for s in suppliers</code> runs the indented lines once per item. Indentation is not decoration in Python: it tells Python which lines belong to the loop.</p>
+<h3>Step 3: a dictionary, the shape of a record</h3>
+<pre><code>part = {"part_no": "E3-1100", "description": "Main frame weldment", "qty": 1, "make_buy": "make"}
+print(part["description"])
+part["weight_kg"] = 38.5
+print(part)</code></pre>
+<p>A dictionary maps keys to values. A database row, a PLM object's attributes and a JSON message from an API all have this shape.</p>
+<h3>Step 4: a small product structure</h3>
+<pre><code>parts = [
+    {"part_no": "E3-1000", "description": "Chassis assembly",    "parent": "",        "qty": 1},
+    {"part_no": "E3-1100", "description": "Main frame weldment", "parent": "E3-1000", "qty": 1},
+    {"part_no": "E3-1110", "description": "Frame long member",   "parent": "E3-1100", "qty": 2},
+    {"part_no": "E3-1120", "description": "Frame cross member",  "parent": "E3-1100", "qty": 4},
+    {"part_no": "E3-1400", "description": "Wheel assembly",      "parent": "E3-1000", "qty": 3},
+    {"part_no": "E3-1410", "description": "Rim",                 "parent": "E3-1400", "qty": 1},
+    {"part_no": "E3-1420", "description": "Tyre",                "parent": "E3-1400", "qty": 1},
+]
+
+by_no = {p["part_no"]: p for p in parts}   # look up any part by its number
+print(by_no["E3-1410"]["description"])</code></pre>
+<p>The line <code>{p["part_no"]: p for p in parts}</code> builds a dictionary from the list in one go. It is called a comprehension. Read it as "for every p in parts, use its part number as the key and the whole record as the value".</p>
+<h3>Step 5: a function that walks the tree</h3>
+<pre><code>def children(parent_no):
+    return [p for p in parts if p["parent"] == parent_no]
+
+def show(part_no, depth=0):
+    p = by_no[part_no]
+    print("    " * depth + f'{p["part_no"]}  {p["description"]}  x{p["qty"]}')
+    for child in children(part_no):
+        show(child["part_no"], depth + 1)
+
+show("E3-1000")</code></pre>
+<p>You should see the chassis with the frame and the wheel assembly indented under it, and their parts indented again. <code>show</code> calls itself for each child. That is <em>recursion</em>, and it is the natural way to walk any tree: a BOM, a folder structure, a factory hierarchy.</p>
+<p>The <code>f'...'</code> string is an f-string. Anything in curly brackets is replaced by its value.</p>
+<h3>Step 6: your own change</h3>
+<ol>
+<li>Add the front suspension: <code>E3-1200</code> under the chassis, with a front fork <code>E3-1210</code> and a shock absorber <code>E3-1220</code> under it. Run <code>show</code> again.</li>
+<li>Write a function <code>total_qty(part_no)</code> that returns how many of a part one chassis needs. A tyre is 1 per wheel assembly and 3 wheel assemblies per chassis, so the answer for <code>E3-1420</code> is 3. Hint: multiply the part's qty by its parent's qty, all the way up.</li>
+</ol>
+<details class="model"><summary>One way to write total_qty</summary>
+<pre><code>def total_qty(part_no):
+    p = by_no[part_no]
+    if p["parent"] == "":
+        return p["qty"]
+    return p["qty"] * total_qty(p["parent"])
+
+print(total_qty("E3-1420"))   # 3
+print(total_qty("E3-1120"))   # 4</code></pre>
+<p>This is the roll-up that MRP systems run on every part, every night. You will build a full version in Unit 4.</p>
+</details>
+<div class="quiz">
+<div class="q" data-a="b"><p>What does <code>suppliers[0]</code> return?</p><ol><li data-o="a">The last supplier</li><li data-o="b">The first supplier</li><li data-o="c">The number of suppliers</li></ol><p class="why">Python counts positions from 0, so index 0 is the first item.</p></div>
+<div class="q" data-a="c"><p>Why does a dictionary suit a part record better than a list?</p><ol><li data-o="a">Dictionaries are faster to print</li><li data-o="b">Lists cannot hold text</li><li data-o="c">You can fetch a value by a meaningful key such as "description" instead of remembering its position</li></ol><p class="why">Records have named fields. Dictionaries keep the names with the values.</p></div>
+</div>
+</article>
+
+<article data-id="m1w1d3" data-type="case" data-title="Case: &quot;What do you have for AI?&quot;" data-mins="75" data-watch="how to identify AI use cases in manufacturing" data-read="Generative AI for Everyone, unit 1">
+<p class="lede">Read the case, write your answers in the notes box, then open the model answer. This company returns throughout the course, so take your time with it.</p>
+<h3>The situation</h3>
+<p>Sahyadri Motors is a fictional Pune company that designs and builds electric cargo three-wheelers and light commercial vehicles. It sells about 18,000 vehicles a year, has revenue of ₹900 crore, and runs two plants: final assembly and welding at Chakan, battery packs and motors at Hosur. Engineering uses a PLM platform for CAD and EBOMs, manufacturing uses spreadsheets for MBOMs and routings, and SAP is the ERP. Each plant has a basic MES.</p>
+<p>You are the solution consultant on a PLM vendor's account team. Sahyadri's new CIO, Rahul Menon, opens the first meeting with: "Our board wants an AI strategy by March. What do you have for AI?" Around the table are Priya Deshmukh (head of manufacturing engineering), Farhan Shaikh (head of quality) and Anjali Rao (CFO).</p>
+<p>Before the meeting your sales lead told you three things. Engineering changes take an average of 19 working days from request to release in manufacturing. Warranty claims cost Sahyadri ₹14 crore last year, a third of them traced to battery pack assembly. And Priya's team of 12 planners rebuilds every MBOM by hand from the EBOM.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Rahul asked a product question. What question would you ask back, and to whom in the room?</li>
+<li>Name three candidate AI use cases for Sahyadri. For each, say which circle on the AI map it sits in and which data it needs.</li>
+<li>Which one would you suggest exploring first, and why?</li>
+<li>Anjali asks: "How will we know it worked?" Give one measurable answer for your first use case.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Turn the question back to decisions and costs: "Which of these problems costs you most: change delays, warranty, or planning effort?" Ask each person, because each owns a different number. Rahul owns the strategy, but Priya, Farhan and Anjali own the problems. A good first meeting ends with their priorities ranked, not with a product demo.</p>
+<p><strong>2.</strong> Three strong candidates:</p>
+<ul>
+<li><em>Change impact assistant</em> (generative AI with tools, Part 5). Reads a change request, finds affected assemblies, MBOM lines and open orders. Data: EBOM, MBOM, change history, ERP orders.</li>
+<li><em>Battery pack quality prediction</em> (machine learning on tables and time series, Part 2). Predicts packs at risk of failure from assembly and test data. Data: MES process data, end-of-line test results, warranty claims linked by serial number.</li>
+<li><em>MBOM drafting from the EBOM</em> (rules plus generative AI, capstone idea). Proposes a first MBOM using past MBOMs and plant rules. Data: pairs of past EBOMs and the MBOMs planners built from them.</li>
+</ul>
+<p><strong>3.</strong> Any choice is defensible if argued from value and data readiness. A strong answer: battery quality has the clearest money (a third of ₹14 crore, about ₹4.7 crore a year) but depends on whether serial numbers link MES data to warranty claims, which is often not true. The change impact assistant has a clear owner (Priya) and its data already sits in PLM and ERP. Start with a short data check on both before committing.</p>
+<p><strong>4.</strong> Pick a baseline and a target, measured the same way before and after. For change impact: "median days from change request to manufacturing release, today 19, target 12 within six months of go-live". For battery quality: "warranty cost per 1,000 packs shipped".</p>
+<p><strong>What the case teaches.</strong> "What do you have for AI?" is almost never a request for a product list. It is an invitation to help a team agree on which problem matters. The consultant who brings that structure is the one invited back.</p>
+</details>
+</article>
+
+<article data-id="m1w1d4" data-type="review" data-title="Unit 1 review and work assignment" data-mins="60" data-watch="AI use cases manufacturing examples" data-read="Generative AI for Everyone, unit 1 summary">
+<p class="lede">Six questions across the week, then one task to carry into your real work. Your score is saved.</p>
+<div class="quiz graded">
+<div class="q" data-a="c"><p>Which statement about the AI circles is correct?</p><ol><li data-o="a">Machine learning is a kind of generative AI</li><li data-o="b">Deep learning and machine learning are unrelated</li><li data-o="c">Generative AI is a kind of deep learning</li><li data-o="d">AI always means a neural network</li></ol><p class="why">The circles nest: AI contains ML, ML contains deep learning, deep learning contains generative AI.</p></div>
+<div class="q" data-a="a"><p>Inspection images from a camera are best handled by:</p><ol><li data-o="a">Deep learning</li><li data-o="b">A spreadsheet pivot table</li><li data-o="c">A large language model</li><li data-o="d">Linear regression on the file names</li></ol><p class="why">Images are where deep learning, especially convolutional networks, made its biggest gains.</p></div>
+<div class="q" data-a="d"><p>In Python, what is <code>{"qty": 4}</code>?</p><ol><li data-o="a">A list</li><li data-o="b">A string</li><li data-o="c">A function</li><li data-o="d">A dictionary</li></ol><p class="why">Curly brackets with key: value pairs make a dictionary.</p></div>
+<div class="q" data-a="b"><p>In the lab, <code>show()</code> calls itself for each child. This technique is called:</p><ol><li data-o="a">Iteration over a string</li><li data-o="b">Recursion</li><li data-o="c">Machine learning</li><li data-o="d">A comprehension</li></ol><p class="why">A function that calls itself is recursive. It is the natural way to walk a tree.</p></div>
+<div class="q" data-a="c"><p>What is the right order of the three things an AI project needs?</p><ol><li data-o="a">Model, data, decision</li><li data-o="b">Data, model, decision</li><li data-o="c">Decision, data, model</li><li data-o="d">Model, decision, data</li></ol><p class="why">Start with the decision that will change, then check the data, then choose the model.</p></div>
+<div class="q" data-a="b"><p>In the Sahyadri case, why ask Priya, Farhan and Anjali rather than only the CIO?</p><ol><li data-o="a">The CIO has no budget</li><li data-o="b">Each owns a different problem and the number that measures it</li><li data-o="c">Only engineers understand AI</li><li data-o="d">To delay the conversation</li></ol><p class="why">Value lives with the people who own the costs. They also decide whether the output is used.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: start two lists</h3>
+<ol>
+<li>Create a free GitHub account if you do not have one, and a public repository called <code>plm-ai-portfolio</code> with a one-line README. Every project in this course goes in there.</li>
+<li>Start a private document called "AI questions customers ask". Write down every AI question you have heard from customers or prospects in the last year, word for word where you can. Aim for ten. No customer names.</li>
+<li>Next to each question, write which circle of the AI map it belongs to and which decision might sit behind it.</li>
+</ol>
+<p>You will turn this list into your talk track in Part 4.</p></div>
+</article>
+
+</section>
+
+<section data-week="2" data-title="Product data as tables" data-goal="Load, filter and summarise a bill of materials with pandas, and explain why a BOM is a graph rather than a list.">
+
+<article data-id="m1w2d1" data-type="lesson" data-title="BOMs as data: keys, levels and graphs" data-mins="75" data-watch="bill of materials structure explained EBOM MBOM" data-read="Python Data Science Handbook, chapter 3, introducing pandas objects">
+<p class="lede">You know BOMs as an engineer. This session looks at them as a data scientist would, because every AI use case in PLM starts by reading product structures into a table.</p>
+<h3>One line, two parts</h3>
+<p>The basic record of a BOM is not a part. It is a <em>relationship</em>: parent P uses child C, quantity Q. Store a BOM as one row per relationship and you get what database people call an adjacency list:</p>
+<table class="stmt">
+<thead><tr><th>parent</th><th>child (part_no)</th><th class="n">qty</th></tr></thead>
+<tbody>
+<tr><td>E3-1000 Chassis</td><td>E3-1100 Main frame weldment</td><td class="n">1</td></tr>
+<tr><td>E3-1100 Main frame weldment</td><td>E3-9001 Bolt M10x40</td><td class="n">16</td></tr>
+<tr><td>E3-2000 Powertrain</td><td>E3-9001 Bolt M10x40</td><td class="n">8</td></tr>
+</tbody>
+</table>
+<p>The bolt appears twice because two assemblies use it. So a BOM is not a tree in the strict sense; it is a <em>graph</em> in which a part can have many parents. Where-used queries ("which assemblies use this bolt?") follow the graph upwards. Explosions ("what goes into the chassis?") follow it downwards.</p>
+<h3>Keys</h3>
+<p>A key is the column, or set of columns, that identifies a row uniquely. In the table above, <code>part_no</code> alone is not unique; the pair (<code>parent</code>, <code>part_no</code>) is. Real PLM systems add more: revision, effectivity dates and variant conditions. Getting the key wrong is the most common reason two systems disagree about the "same" BOM.</p>
+<h3>Levels</h3>
+<p>The level of a line is its distance from the top. The vehicle is level 0, the chassis level 1, the frame level 2, the bolt level 3. Indented BOM reports are just the rows sorted by structure and indented by level. You computed this last unit by walking up through parents.</p>
+<h3>EBOM, MBOM and BOP as three tables</h3>
+<ul>
+<li><strong>EBOM</strong>: structure by function, as engineering designed it. Rows: parent assembly, child part, quantity.</li>
+<li><strong>MBOM</strong>: structure by how the plant builds it. Adds phantom and kit levels, plant-specific parts (consumables, packaging), and can reorganise assemblies by station.</li>
+<li><strong>Bill of process</strong>: operations, their sequence, stations, times, and which MBOM parts each operation consumes.</li>
+</ul>
+<p>Most "digital thread" questions are joins between these three tables. "Which operations are affected if this EBOM part changes?" means: find the part in the EBOM, find the matching MBOM lines, find the operations that consume them.</p>
+<h3>Tidy data</h3>
+<p>Data is <em>tidy</em> when each row is one observation, each column one variable, each table one kind of thing. A spreadsheet MBOM with merged cells, colour coding and totals in the middle is not tidy. Before any analysis, and certainly before any machine learning, you reshape data into tidy tables. That reshaping is usually most of the work.</p>
+<div class="callout"><h4>In your job</h4><p>When you scope an AI project, ask for an export of the BOM as one row per parent-child relationship with keys. How long it takes the customer to produce that file tells you more about their data readiness than any questionnaire.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why is <code>part_no</code> alone not a valid key for BOM lines?</p><ol><li data-o="a">Part numbers contain letters</li><li data-o="b">The same part can appear under several parents</li><li data-o="c">Keys must be numbers</li></ol><p class="why">A shared part such as a bolt has one row per parent, so you need the parent in the key too.</p></div>
+<div class="q" data-a="a"><p>"Which assemblies use bolt E3-9001?" is a:</p><ol><li data-o="a">Where-used query, going up the graph</li><li data-o="b">BOM explosion, going down the graph</li><li data-o="c">Routing query</li></ol><p class="why">Where-used starts at a child and finds its parents.</p></div>
+<div class="q" data-a="c"><p>Which is the best description of tidy data?</p><ol><li data-o="a">Data with no missing values</li><li data-o="b">Data stored in one big spreadsheet tab</li><li data-o="c">One observation per row, one variable per column, one kind of thing per table</li></ol><p class="why">Tidy is about shape, not cleanliness. Clean but badly shaped data is still hard to analyse.</p></div>
+</div>
+</article>
+
+<article data-id="m1w2d2" data-type="lab" data-title="Lab: a synthetic EBOM in pandas" data-mins="90" data-watch="pandas tutorial read_csv groupby value_counts beginners" data-read="Kaggle Learn Pandas, lessons 1 to 3">
+<p class="lede">You will create the EBOM of Sahyadri's electric cargo three-wheeler, save it as a CSV file, and answer real questions about it with pandas. This file is reused in Parts 1 and 5, so keep it.</p>
+<h3>Step 1: create the data</h3>
+<p>Open a new Colab notebook called <code>w02-ebom</code>. In the first cell, paste the rows below. This is the one time pasting is fine: the data is long, the code that follows is what you should type.</p>
+<pre><code>import pandas as pd
+
+rows = [
+    # part_no,  description,                   parent,    qty, make_buy
+    ("E3-0000", "Electric cargo three-wheeler", "",        1,  "make"),
+    ("E3-1000", "Chassis assembly",             "E3-0000", 1,  "make"),
+    ("E3-1100", "Main frame weldment",          "E3-1000", 1,  "make"),
+    ("E3-1110", "Frame long member",            "E3-1100", 2,  "make"),
+    ("E3-1120", "Frame cross member",           "E3-1100", 4,  "make"),
+    ("E3-1130", "Mounting bracket",             "E3-1100", 8,  "make"),
+    ("E3-9001", "Bolt M10x40",                  "E3-1100", 16, "buy"),
+    ("E3-9002", "Nut M10",                      "E3-1100", 16, "buy"),
+    ("E3-1200", "Front suspension",             "E3-1000", 1,  "make"),
+    ("E3-1210", "Front fork",                   "E3-1200", 1,  "buy"),
+    ("E3-1220", "Shock absorber",               "E3-1200", 1,  "buy"),
+    ("E3-1300", "Rear axle assembly",           "E3-1000", 1,  "make"),
+    ("E3-1310", "Axle beam",                    "E3-1300", 1,  "make"),
+    ("E3-1320", "Leaf spring",                  "E3-1300", 2,  "buy"),
+    ("E3-1400", "Wheel assembly",               "E3-1000", 3,  "make"),
+    ("E3-1410", "Rim",                          "E3-1400", 1,  "buy"),
+    ("E3-1420", "Tyre",                         "E3-1400", 1,  "buy"),
+    ("E3-2000", "Powertrain assembly",          "E3-0000", 1,  "make"),
+    ("E3-2100", "Traction motor",               "E3-2000", 1,  "buy"),
+    ("E3-2200", "Motor controller",             "E3-2000", 1,  "buy"),
+    ("E3-2300", "Differential",                 "E3-2000", 1,  "buy"),
+    ("E3-2400", "Motor mount bracket",          "E3-2000", 2,  "make"),
+    ("E3-9001", "Bolt M10x40",                  "E3-2000", 8,  "buy"),
+    ("E3-9002", "Nut M10",                      "E3-2000", 8,  "buy"),
+    ("E3-3000", "Battery pack assembly",        "E3-0000", 1,  "make"),
+    ("E3-3100", "Cell module",                  "E3-3000", 4,  "make"),
+    ("E3-3110", "Li-ion cell 21700",            "E3-3100", 24, "buy"),
+    ("E3-3200", "Battery management board",     "E3-3000", 1,  "buy"),
+    ("E3-3300", "Battery enclosure",            "E3-3000", 1,  "make"),
+    ("E3-3400", "Busbar",                       "E3-3000", 6,  "buy"),
+    ("E3-4000", "Cabin assembly",               "E3-0000", 1,  "make"),
+    ("E3-4100", "Cabin shell",                  "E3-4000", 1,  "make"),
+    ("E3-4200", "Windshield glass",             "E3-4000", 1,  "buy"),
+    ("E3-4300", "Driver seat",                  "E3-4000", 1,  "buy"),
+    ("E3-4400", "Dashboard assembly",           "E3-4000", 1,  "make"),
+    ("E3-4410", "Instrument cluster",           "E3-4400", 1,  "buy"),
+    ("E3-5000", "Cargo body assembly",          "E3-0000", 1,  "make"),
+    ("E3-5100", "Cargo floor panel",            "E3-5000", 1,  "make"),
+    ("E3-5200", "Cargo side panel",             "E3-5000", 2,  "make"),
+    ("E3-5300", "Tail gate",                    "E3-5000", 1,  "make"),
+    ("E3-5400", "Hinge",                        "E3-5000", 4,  "buy"),
+    ("E3-6000", "Electrical harness kit",       "E3-0000", 1,  "make"),
+    ("E3-6100", "Main wiring harness",          "E3-6000", 1,  "buy"),
+    ("E3-6200", "Lighting harness",             "E3-6000", 1,  "buy"),
+    ("E3-6300", "Headlamp",                     "E3-6000", 2,  "buy"),
+    ("E3-6400", "Tail lamp",                    "E3-6000", 2,  "buy"),
+]
+ebom = pd.DataFrame(rows, columns=["part_no", "description", "parent", "qty", "make_buy"])
+ebom.to_csv("ebom.csv", index=False)
+print(len(ebom), "lines saved")</code></pre>
+<p>You should see <code>46 lines saved</code>. Click the folder icon on Colab's left bar to see <code>ebom.csv</code>. Right-click it and download it: Colab deletes files when the session ends.</p>
+<h3>Step 2: read it back and look</h3>
+<pre><code>ebom = pd.read_csv("ebom.csv", keep_default_na=False)
+ebom.head()</code></pre>
+<p><code>keep_default_na=False</code> stops pandas turning the empty parent of the top line into a missing value. Try removing it and run <code>ebom.head()</code> to see the difference.</p>
+<pre><code>print(ebom.shape)                     # (rows, columns)
+print(ebom.dtypes)                    # the type of each column
+ebom["make_buy"].value_counts()</code></pre>
+<h3>Step 3: filter rows</h3>
+<pre><code>bought = ebom[ebom["make_buy"] == "buy"]
+print(len(bought), "bought lines")
+
+big_qty = ebom[ebom["qty"] &gt; 4]
+big_qty</code></pre>
+<p>Inside the square brackets is a column of True and False values. pandas keeps the rows where it is True. This pattern, <code>df[condition]</code>, is the one you will use most often.</p>
+<h3>Step 4: group and count</h3>
+<pre><code>children_per_parent = ebom.groupby("parent")["part_no"].count().sort_values(ascending=False)
+children_per_parent.head()</code></pre>
+<p>The top vehicle and the powertrain have the most direct children. <code>groupby</code> splits the table by parent, applies <code>count</code> to each group and combines the results.</p>
+<h3>Step 5: where-used for one part</h3>
+<pre><code>ebom[ebom["part_no"] == "E3-9001"][["parent", "qty"]]</code></pre>
+<p>Two parents, 16 and 8 bolts. Double square brackets select several columns.</p>
+<h3>Step 6: add the level</h3>
+<pre><code>parent_of = {}
+for _, r in ebom.iterrows():
+    parent_of.setdefault(r["part_no"], r["parent"])
+
+def level(part):
+    n = 0
+    while parent_of.get(part, ""):
+        part = parent_of[part]
+        n += 1
+    return n
+
+ebom["level"] = ebom["parent"].apply(lambda p: 0 if p == "" else level(p) + 1)
+ebom["level"].value_counts().sort_index()</code></pre>
+<p>A line's level is one more than its parent's level. Every parent in this BOM is an assembly with exactly one parent of its own, so walking up the <code>parent_of</code> dictionary gives one answer. In a real BOM with shared sub-assemblies you would compute levels per line, not per part, which is what Unit 4 does.</p>
+<p>You should get 1 line at level 0, 6 at level 1, 26 at level 2 and 13 at level 3.</p>
+<h3>Step 7: an indented report</h3>
+<pre><code>for _, r in ebom.iterrows():
+    print("    " * r["level"] + f'{r["part_no"]}  {r["description"]}  x{r["qty"]}')</code></pre>
+<h3>Your own questions</h3>
+<ol>
+<li>How many distinct parts are there (not lines)? Hint: <code>ebom["part_no"].nunique()</code>.</li>
+<li>Which parent has the most bought children?</li>
+<li>Add a column <code>weight_kg</code> with a guess for each part (use <code>0.1</code> for fasteners) and compute the total weight of one vehicle. You will need the roll-up from Unit 1's <code>total_qty</code>.</li>
+</ol>
+<div class="quiz">
+<div class="q" data-a="a"><p>What does <code>ebom[ebom["qty"] &gt; 4]</code> return?</p><ol><li data-o="a">Only the rows whose quantity is greater than 4</li><li data-o="b">The first 4 rows</li><li data-o="c">A count of rows with quantity above 4</li></ol><p class="why">A condition inside the brackets filters rows.</p></div>
+<div class="q" data-a="b"><p>Why download <code>ebom.csv</code> from Colab?</p><ol><li data-o="a">Colab cannot read CSV files</li><li data-o="b">Files in a Colab session are deleted when the session ends</li><li data-o="c">The file is too large</li></ol><p class="why">Colab gives you a temporary machine. Save anything you want to keep to your computer, Google Drive or GitHub.</p></div>
+</div>
+</article>
+
+<article data-id="m1w2d3" data-type="case" data-title="Case: the 2,000 broken BOM lines" data-mins="75" data-watch="cost of poor data quality manufacturing BOM accuracy" data-read="Rules of Machine Learning, the overview and rule 1">
+<p class="lede">An AI request that turns into a data quality conversation. This is the most common shape of an AI opportunity in PLM, and the hardest one to price.</p>
+<h3>The situation</h3>
+<p>Two weeks after your first meeting, Priya Deshmukh at Sahyadri Motors sends you a request: "We want AI to generate MBOMs automatically from the EBOM. My planners spend too long on it." She attaches a sample: the EBOM and MBOM for one vehicle variant, exported to Excel.</p>
+<p>You spend an evening with the files. The EBOM has 1,840 lines. The MBOM has 2,310. When you match them on part number you find:</p>
+<table class="stmt">
+<thead><tr><th>Finding</th><th class="n">Lines</th></tr></thead>
+<tbody>
+<tr><td>EBOM parts with no matching MBOM line</td><td class="n">212</td></tr>
+<tr><td>MBOM parts with no matching EBOM line (excluding consumables)</td><td class="n">390</td></tr>
+<tr><td>Matched parts whose total quantity differs</td><td class="n">146</td></tr>
+<tr><td>MBOM lines pointing to an old EBOM revision</td><td class="n">1,270</td></tr>
+</tbody>
+</table>
+<p>Priya's team is 12 planners. She estimates each new variant takes 6 planner-days to build into an MBOM, and Sahyadri launches about 40 variants a year. Fully loaded, a planner costs ₹18 lakh a year (about 220 working days). Separately, the plant reports roughly 25 line stoppages a year caused by "wrong part at station" issues, each costing about ₹4 lakh in lost output and rework.</p>
+<h3>Your questions</h3>
+<ol>
+<li>What do the four findings tell you about whether an AI model could learn to generate MBOMs from this data?</li>
+<li>Estimate the annual cost of MBOM creation and of BOM-related line stoppages. Show your arithmetic.</li>
+<li>What would you propose to Priya as a first step, and how would you position it so it does not sound like "no"?</li>
+<li>How would you describe the long-term AI opportunity once the first step is done?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> A model learns from examples of EBOM-to-MBOM transformations. Here the examples are unreliable: 1,270 MBOM lines (55%) point to an old EBOM revision, so the pairs do not describe the same product. The 212 missing and 390 unmatched parts may be legitimate manufacturing additions or errors, and nobody can yet tell which. A model trained on this would learn the mess as well as the method. Data first.</p>
+<p><strong>2.</strong> MBOM creation: 40 variants × 6 days = 240 planner-days. A planner-day costs ₹18 lakh ÷ 220 ≈ ₹8,200, so about ₹20 lakh a year. Line stoppages: 25 × ₹4 lakh = ₹1 crore a year. The stoppages cost five times more than the planning effort. That changes the story: the value is in accuracy, not only speed.</p>
+<p><strong>3.</strong> Propose a short, fixed-scope "BOM health check": reconcile EBOM and MBOM for the top 5 variants, classify every mismatch (legitimate, error, revision lag), and set up automatic reconciliation so new mismatches are flagged on every change. Position it as "phase 1 of MBOM automation": the rules it discovers are exactly what an automated MBOM generator needs, and it starts saving money on stoppages immediately.</p>
+<p><strong>4.</strong> Once the EBOM and MBOM are kept in sync, every past variant becomes a clean training example. Phase 2 can propose MBOM drafts by learning from those pairs, with planners reviewing instead of building. A reasonable target is cutting 6 days per variant to 2 while holding mismatches near zero.</p>
+<p><strong>What the case teaches.</strong> Data quality work is not a detour from AI; it is where AI value usually starts. Priced and positioned as phase 1, it is also an easier sale, because its savings are visible quickly.</p>
+</details>
+</article>
+
+<article data-id="m1w2d4" data-type="review" data-title="Unit 2 review and work assignment" data-mins="60" data-watch="pandas basics filtering groupby review" data-read="Python Data Science Handbook, chapter 3, aggregation and grouping">
+<p class="lede">Six questions on BOMs as data and on pandas, then a task with your own customer's data landscape.</p>
+<div class="quiz graded">
+<div class="q" data-a="b"><p>A BOM where one part can have several parents is best described as a:</p><ol><li data-o="a">List</li><li data-o="b">Graph</li><li data-o="c">Strict tree</li><li data-o="d">Time series</li></ol><p class="why">Shared parts give a child several parents, which a strict tree does not allow.</p></div>
+<div class="q" data-a="d"><p>Which pandas call counts the rows for each value of <code>make_buy</code>?</p><ol><li data-o="a"><code>ebom.head()</code></li><li data-o="b"><code>ebom.shape</code></li><li data-o="c"><code>ebom.sort_values("make_buy")</code></li><li data-o="d"><code>ebom["make_buy"].value_counts()</code></li></ol><p class="why"><code>value_counts</code> returns each distinct value with how many times it appears.</p></div>
+<div class="q" data-a="a"><p>In the lab, how many Nut M10 does one vehicle need in total?</p><ol><li data-o="a">24</li><li data-o="b">16</li><li data-o="c">8</li><li data-o="d">32</li></ol><p class="why">16 under the frame weldment and 8 under the powertrain, each used once per vehicle.</p></div>
+<div class="q" data-a="c"><p>In the broken-BOM case, which finding most undermines training a model on past EBOM-MBOM pairs?</p><ol><li data-o="a">146 quantity differences</li><li data-o="b">212 EBOM parts missing from the MBOM</li><li data-o="c">1,270 MBOM lines pointing to an old EBOM revision</li><li data-o="d">The EBOM has fewer lines than the MBOM</li></ol><p class="why">If over half the pairs describe different revisions, the examples do not match, so the model learns noise.</p></div>
+<div class="q" data-a="b"><p>In the same case, why did the value story shift from speed to accuracy?</p><ol><li data-o="a">Planners are expensive</li><li data-o="b">Line stoppages cost about five times more than MBOM creation effort</li><li data-o="c">AI cannot speed up planning</li><li data-o="d">The CFO asked for it</li></ol><p class="why">About ₹1 crore of stoppages against about ₹20 lakh of planning time.</p></div>
+<div class="q" data-a="c"><p>MBOM lines differ from EBOM lines mainly because:</p><ol><li data-o="a">The MBOM is always wrong</li><li data-o="b">Engineering forgets parts</li><li data-o="c">Manufacturing restructures by how the plant builds and adds plant-specific items</li><li data-o="d">The MBOM uses different units</li></ol><p class="why">Phantoms, kits, consumables and station-based structure are legitimate differences. The job is to tell those from errors.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: draw one customer's data map</h3>
+<p>Pick one account you support. On one page, draw boxes for the systems that hold product and production data (PLM, ERP, MES, quality, spreadsheets) and arrows for how data moves between them.</p>
+<ol>
+<li>Mark where the EBOM, MBOM and routings are mastered.</li>
+<li>Mark where you suspect copies drift out of sync.</li>
+<li>Write one sentence: if this customer asked for AI tomorrow, which data would you check first?</li>
+</ol>
+<p>Use only what you already know from your work. Keep it; you will reuse it in Unit 3.</p></div>
+</article>
+
+</section>

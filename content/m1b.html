@@ -1,0 +1,376 @@
+<section data-week="3" data-title="Joining and checking structures" data-goal="Compare two BOMs with joins, classify every difference, and judge a customer's data readiness for AI.">
+
+<article data-id="m1w3d1" data-type="lesson" data-title="Joins and data quality rules" data-mins="75" data-watch="pandas merge inner outer left join explained; data quality dimensions explained" data-read="Python Data Science Handbook, chapter 3, combining datasets: merge and join">
+<p class="lede">Almost every question that crosses two systems is a join. This session teaches the four joins and the five ways data goes wrong, so you can read any reconciliation report and know what it means.</p>
+<h3>The four joins</h3>
+<p>A join matches rows in two tables on a key. Picture the EBOM on the left and the MBOM on the right, matched on part number.</p>
+<table class="stmt">
+<thead><tr><th>Join</th><th>Keeps</th><th>Answers</th></tr></thead>
+<tbody>
+<tr><td>Inner</td><td>Only parts in both</td><td>"For parts both sides know, do quantities agree?"</td></tr>
+<tr><td>Left</td><td>Every EBOM part, with MBOM data where it exists</td><td>"Has every engineered part been planned?"</td></tr>
+<tr><td>Right</td><td>Every MBOM part, with EBOM data where it exists</td><td>"Is everything the plant builds backed by engineering?"</td></tr>
+<tr><td>Outer</td><td>Every part from either side</td><td>"Show me all differences at once."</td></tr>
+</tbody>
+</table>
+<p>For a reconciliation you want the outer join, plus a marker saying where each row came from. pandas gives you that marker with <code>indicator=True</code>: <code>left_only</code>, <code>right_only</code> or <code>both</code>.</p>
+<h3>Joins that silently go wrong</h3>
+<ul>
+<li><strong>Key format differences.</strong> "E3-1100" and "E3-1100 " (trailing space) do not match. Neither do "e3-1100" or "E31100". Always clean keys before joining.</li>
+<li><strong>Duplicate keys.</strong> If a part appears three times on the left and twice on the right, an inner join produces six rows. Summarise to one row per key first, or include enough columns in the key.</li>
+<li><strong>Revision mismatch.</strong> Joining on part number alone matches revision B in engineering with revision A in manufacturing. The join "succeeds" and hides the problem.</li>
+</ul>
+<h3>Five dimensions of data quality</h3>
+<table class="stmt">
+<thead><tr><th>Dimension</th><th>Question</th><th>BOM example</th></tr></thead>
+<tbody>
+<tr><td>Completeness</td><td>Is anything missing?</td><td>An EBOM part with no MBOM line</td></tr>
+<tr><td>Accuracy</td><td>Is the value right?</td><td>24 cells per module in engineering, 20 in manufacturing</td></tr>
+<tr><td>Consistency</td><td>Do two systems agree?</td><td>Descriptions differ between PLM and ERP</td></tr>
+<tr><td>Timeliness</td><td>Is it current?</td><td>The MBOM still points at last year's revision</td></tr>
+<tr><td>Validity</td><td>Does it obey the rules?</td><td>A quantity of zero, a parent that does not exist</td></tr>
+</tbody>
+</table>
+<p>These five words let you turn "the data is bad" into a list of specific, fixable findings with owners. That list is what a customer's management will act on.</p>
+<h3>Why AI cares so much</h3>
+<p>A model learns whatever patterns are in its training data, including the errors. If 10% of labels are wrong, the model's ceiling is roughly 90% agreement with reality, however clever it is. Generative AI has the same problem in a different form: a copilot that answers from outdated work instructions gives confident, outdated answers.</p>
+<div class="callout"><h4>In your job</h4><p>A reconciliation report is a cheap, fast, persuasive first deliverable. It uses the customer's own data, finds real money within days, and sets up every later AI step. Many PLM AI roadmaps should start here.</p></div>
+<div class="quiz">
+<div class="q" data-a="c"><p>You want every part from both the EBOM and the MBOM in one table, with a flag for where each came from. Which join?</p><ol><li data-o="a">Inner</li><li data-o="b">Left</li><li data-o="c">Outer, with an indicator</li></ol><p class="why">Only the outer join keeps unmatched rows from both sides.</p></div>
+<div class="q" data-a="a"><p>An inner join returns more rows than either input table. What is the most likely cause?</p><ol><li data-o="a">Duplicate keys on both sides</li><li data-o="b">Missing values in a description column</li><li data-o="c">The tables are sorted differently</li></ol><p class="why">Each duplicate on the left matches each duplicate on the right, multiplying rows.</p></div>
+<div class="q" data-a="b"><p>The MBOM references revision A of a part that engineering released as revision C last month. Which quality dimension is this?</p><ol><li data-o="a">Validity</li><li data-o="b">Timeliness</li><li data-o="c">Completeness</li></ol><p class="why">The data was once correct but has not kept up with change.</p></div>
+</div>
+</article>
+
+<article data-id="m1w3d2" data-type="lab" data-title="Lab: reconcile the EBOM and the MBOM" data-mins="90" data-watch="pandas merge indicator outer join tutorial; pandas plot bar chart" data-read="Kaggle Learn Pandas, lessons 4 to 6; Kaggle Learn Data Visualization, lessons 1 to 3">
+<p class="lede">You will build an MBOM from last unit's EBOM with deliberate errors, compare the two, classify every difference and export a report and a chart.</p>
+<h3>Step 1: upload last unit's file</h3>
+<p>Open a new notebook <code>w03-reconcile</code>. Click the folder icon, then the upload icon, and upload the <code>ebom.csv</code> you downloaded in the last unit. If you lost it, rerun Step 1 of the Unit 2 lab.</p>
+<pre><code>import pandas as pd
+ebom = pd.read_csv("ebom.csv", keep_default_na=False)
+len(ebom)</code></pre>
+<h3>Step 2: make an MBOM with planted problems</h3>
+<pre><code>mbom = ebom[["part_no", "description", "parent", "qty"]].copy()
+
+# three engineered parts never planned
+mbom = mbom[~mbom["part_no"].isin(["E3-4410", "E3-6400", "E3-3400"])]
+
+# two wrong quantities
+mbom.loc[mbom["part_no"] == "E3-1130", "qty"] = 6
+mbom.loc[mbom["part_no"] == "E3-3110", "qty"] = 20
+
+# plant-only items, plus one part engineering never released
+plant_items = pd.DataFrame([
+    ("M-KIT-01", "Fastener kit, chassis line", "E3-1000", 1),
+    ("C-0101",   "Thread locker 10 ml",        "E3-1100", 1),
+    ("C-0102",   "Coolant fill 2 L",           "E3-3000", 1),
+    ("E3-5410",  "Hinge pin",                  "E3-5000", 4),
+], columns=["part_no", "description", "parent", "qty"])
+
+mbom = pd.concat([mbom, plant_items], ignore_index=True)
+mbom.to_csv("mbom.csv", index=False)
+print(len(mbom), "MBOM lines")</code></pre>
+<p>You should see 47 lines. <code>~</code> means "not", so the first filter keeps every part that is not in the list. <code>.loc[condition, "qty"] = 6</code> changes the quantity only on matching rows.</p>
+<h3>Step 3: one row per part on each side</h3>
+<pre><code>def totals(bom):
+    return bom.groupby("part_no", as_index=False).agg(
+        description=("description", "first"), qty=("qty", "sum"))
+
+e = totals(ebom)
+m = totals(mbom)
+print(len(e), len(m))</code></pre>
+<p>This sums each part's direct quantities across its parents, so the bolts become one row of 24. That is enough to compare two structures with the same shape. It is not the quantity per vehicle; you will add the proper roll-up next week.</p>
+<h3>Step 4: the outer join</h3>
+<pre><code>cmp = e.merge(m, on="part_no", how="outer", suffixes=("_ebom", "_mbom"), indicator=True)
+cmp["_merge"].value_counts()</code></pre>
+<p>Expect 41 in both, 3 only in the EBOM (<code>left_only</code>) and 4 only in the MBOM (<code>right_only</code>).</p>
+<h3>Step 5: classify each row</h3>
+<pre><code>def classify(r):
+    if r["_merge"] == "left_only":
+        return "missing in MBOM"
+    if r["_merge"] == "right_only":
+        return "plant item" if r["part_no"].startswith(("C-", "M-")) else "not in EBOM"
+    if r["qty_ebom"] != r["qty_mbom"]:
+        return "quantity mismatch"
+    return "ok"
+
+cmp["status"] = cmp.apply(classify, axis=1)
+cmp["status"].value_counts()</code></pre>
+<p><code>apply(..., axis=1)</code> runs the function once per row. The rule for plant items is a business rule written as code: consumables start with <code>C-</code> and kits with <code>M-</code>. In a real project you would agree these rules with the customer's planners.</p>
+<h3>Step 6: the issue list, a chart and an Excel file</h3>
+<pre><code>issues = cmp[~cmp["status"].isin(["ok", "plant item"])]
+print(issues[["part_no", "description_ebom", "description_mbom", "qty_ebom", "qty_mbom", "status"]])
+
+ax = issues["status"].value_counts().plot(kind="barh", title="EBOM vs MBOM issues")
+ax.figure.tight_layout()
+ax.figure.savefig("issues.png")
+
+issues.drop(columns="_merge").to_excel("bom_issues.xlsx", index=False)</code></pre>
+<p>You should find six issues: three missing, two quantity mismatches and one part not in the EBOM. Download <code>bom_issues.xlsx</code> and <code>issues.png</code>.</p>
+<h3>Step 7: push to GitHub</h3>
+<p>In Colab choose File, Save a copy in GitHub, pick your <code>plm-ai-portfolio</code> repository and save the notebook into a folder called <code>month1</code>. Upload the two CSV files through the GitHub website (Add file, Upload files).</p>
+<h3>Stretch</h3>
+<ol>
+<li>Introduce a key-format error: change one MBOM part number to lower case. Watch it appear as both "missing" and "not in EBOM". Then fix it by adding <code>bom["part_no"] = bom["part_no"].str.strip().str.upper()</code> inside <code>totals</code>.</li>
+<li>Add a <code>validity</code> check that flags any quantity of zero or below.</li>
+</ol>
+<div class="quiz">
+<div class="q" data-a="b"><p>What does <code>left_only</code> mean in the comparison?</p><ol><li data-o="a">The part exists only in the MBOM</li><li data-o="b">The part exists only in the EBOM</li><li data-o="c">The part's quantity is lower on the left</li></ol><p class="why">The EBOM was the left table in the merge.</p></div>
+<div class="q" data-a="a"><p>Why are consumables classified as "plant item" rather than an error?</p><ol><li data-o="a">They are legitimate manufacturing additions that engineering does not release</li><li data-o="b">They have no part numbers</li><li data-o="c">Their quantities are always 1</li></ol><p class="why">An MBOM legitimately contains items the EBOM never will. The rules for which ones are agreed with planners.</p></div>
+</div>
+</article>
+
+<article data-id="m1w3d3" data-type="case" data-title="Case: is the battery data ready?" data-mins="75" data-watch="data readiness assessment for machine learning projects manufacturing" data-read="Rules of Machine Learning, rules 2 to 6">
+<p class="lede">The CFO likes the warranty number. Before anyone promises a model, you have to find out whether the data can support one.</p>
+<h3>The situation</h3>
+<p>At Sahyadri Motors, Farhan Shaikh (quality) wants to predict which battery packs will fail in the field. Warranty claims on packs cost about ₹4.7 crore last year. Anjali Rao (CFO) says she would fund a pilot "if it pays back inside a year".</p>
+<p>Farhan's team sends you a description of what they have:</p>
+<ul>
+<li><strong>MES at Hosur</strong>: for each pack, the serial number, assembly date, shift, line, torque values on 12 busbar bolts, and cell lot numbers. Kept for 18 months.</li>
+<li><strong>End-of-line test</strong>: capacity, internal resistance and insulation test per pack, linked by serial number. About 4% of serial numbers were typed by hand and contain errors.</li>
+<li><strong>Warranty system</strong>: claims from dealers, with the vehicle chassis number and a free-text fault description. The pack serial number is filled in on about 60% of claims.</li>
+<li><strong>Shipments</strong>: 18,000 vehicles a year. Warranty claims on packs: about 540 a year.</li>
+</ul>
+<h3>Your questions</h3>
+<ol>
+<li>Using the five quality dimensions, list the main data problems.</li>
+<li>How many usable "failed pack" examples will a model have from one year of data? Is that enough to start?</li>
+<li>What would you do in the first four weeks, before any modelling?</li>
+<li>Sketch a payback estimate that would satisfy Anjali, stating your assumptions.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Completeness: 40% of claims lack the pack serial number, so they cannot be linked to production data. Accuracy: 4% of test serials are mistyped. Consistency: claims identify vehicles by chassis number, MES by pack serial; a vehicle-to-pack mapping is needed. Timeliness: MES history is only 18 months, and failures may appear after a year in the field. Validity: free-text fault descriptions mix pack faults with wiring or charger faults.</p>
+<p><strong>2.</strong> About 540 claims × 60% linked ≈ 324, and fewer once non-pack faults are removed, say 250 to 300 genuine failures against 17,700 good packs. That is about 1.5% positives. It is enough to start exploring and to find strong signals such as one cell lot or one torque pattern, not enough to trust a complex model. Recovering the missing 40% via chassis-to-pack mapping would raise it to around 450.</p>
+<p><strong>3.</strong> Build the link table (chassis number to pack serial) from shipping or ERP records. Fix serial-number matching with fuzzy matching or a check digit. Classify claim texts into pack and non-pack faults; this is also a good small generative AI task. Then do simple analysis first: failure rate by cell lot, line, shift and torque band. Often a pivot table finds the cause before any model does.</p>
+<p><strong>4.</strong> Example: if the model or analysis lets Sahyadri catch or prevent 20% of pack failures, savings are 0.2 × ₹4.7 crore ≈ ₹94 lakh a year. Pilot cost: data integration and analysis, say ₹35 to 45 lakh, plus extra end-of-line tests on flagged packs. Payback within a year is plausible if the 20% holds. State that 20% is an assumption to be tested in the pilot, and agree the measure: pack claims per 1,000 vehicles in the first 12 months.</p>
+<p><strong>What the case teaches.</strong> Data readiness is not yes or no. It is a list of gaps, each with an effort and an owner. Showing that list early builds trust and sets a realistic scope.</p>
+</details>
+</article>
+
+<article data-id="m1w3d4" data-type="review" data-title="Unit 3 review and work assignment" data-mins="60" data-watch="data quality dimensions completeness accuracy consistency timeliness validity" data-read="Python Data Science Handbook, chapter 3, merge and join, review">
+<p class="lede">Six questions on joins, data quality and readiness, then a task on your own data map.</p>
+<div class="quiz graded">
+<div class="q" data-a="d"><p>Which pandas argument adds a column showing whether a row came from the left, the right or both tables?</p><ol><li data-o="a"><code>how="inner"</code></li><li data-o="b"><code>suffixes=</code></li><li data-o="c"><code>on="part_no"</code></li><li data-o="d"><code>indicator=True</code></li></ol><p class="why">The indicator adds a <code>_merge</code> column.</p></div>
+<div class="q" data-a="a"><p>"E3-1100" in PLM and "E3-1100 " in ERP fail to match. The fix is to:</p><ol><li data-o="a">Clean the keys, for example strip spaces and set one case, before joining</li><li data-o="b">Use an inner join</li><li data-o="c">Delete the ERP rows</li><li data-o="d">Join on description instead</li></ol><p class="why">Key formats must match exactly. Normalise them first.</p></div>
+<div class="q" data-a="b"><p>40% of warranty claims lack a pack serial number. Which quality dimension?</p><ol><li data-o="a">Accuracy</li><li data-o="b">Completeness</li><li data-o="c">Timeliness</li><li data-o="d">Validity</li></ol><p class="why">The value is missing, not wrong.</p></div>
+<div class="q" data-a="c"><p>A model is trained on data where 10% of labels are wrong. What is the main consequence?</p><ol><li data-o="a">Training takes 10% longer</li><li data-o="b">The model ignores the wrong labels</li><li data-o="c">Its agreement with reality is capped, because it learns the errors too</li><li data-o="d">Nothing, if the model is large enough</li></ol><p class="why">Models learn what the data shows. Bad labels set a ceiling.</p></div>
+<div class="q" data-a="c"><p>In the battery case, why look at failure rate by cell lot before building a model?</p><ol><li data-o="a">Models cannot use cell lots</li><li data-o="b">It is required by law</li><li data-o="c">Simple analysis often finds the main cause faster and cheaper than a model</li><li data-o="d">Cell lots are the only clean data</li></ol><p class="why">Start simple. A pivot table that finds a bad lot pays back immediately.</p></div>
+<div class="q" data-a="b"><p>In this unit's lab, how many issues should the report show, excluding plant items?</p><ol><li data-o="a">3</li><li data-o="b">6</li><li data-o="c">9</li><li data-o="d">47</li></ol><p class="why">Three missing parts, two quantity mismatches and one part not in the EBOM.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: a readiness scorecard</h3>
+<p>Take the data map you drew in Unit 2. For the one AI idea that customer would most likely want, score each data source from 1 to 5 on the five quality dimensions, with one sentence of evidence for each score. Write the three gaps you would close first and who at the customer would own each.</p></div>
+</article>
+
+</section>
+
+<section data-week="4" data-title="Ship Project 1" data-goal="Turn notebook code into a reusable tool, publish it on GitHub, and write its one-page value case.">
+
+<article data-id="m1w4d1" data-type="lesson" data-title="From notebook to tool other people can run" data-mins="75" data-watch="python functions modules main guard tutorial; how to write a good README" data-read="Python for Everybody (book), chapters 4 and 7, functions and files">
+<p class="lede">A notebook that only works on your laptop is a demo. A small, tidy tool that a colleague can run is a product. The difference is a handful of habits.</p>
+<h3>Functions with one job</h3>
+<p>Last unit's notebook mixed loading, comparing and reporting in one flow. Split it into functions, each doing one thing: <code>load_bom</code>, <code>rolled_up</code>, <code>compare</code>, <code>report</code>. Small functions are easier to test, reuse and explain. If you cannot describe a function in one sentence, it is doing too much.</p>
+<h3>Check inputs early</h3>
+<p>Real files arrive with missing columns, renamed headers and stray blank rows. Check at the door and fail with a clear message: "mbom.csv is missing the column 'qty'" saves a colleague an hour. This habit matters even more with AI systems, which tend to fail quietly rather than loudly.</p>
+<h3>The roll-up, done properly</h3>
+<p>Quantity per vehicle is the product of quantities along the path from the top, summed over every path. A bolt used 16 times in the frame and 8 times in the powertrain is 24 per vehicle; a cell used 24 times per module and 4 modules per pack is 96. The clean way to compute this is to <em>explode</em> the BOM: start at the top, walk down every line, multiply as you go and record each line's quantity per vehicle. Then sum by part.</p>
+<h3>A script and a module</h3>
+<p>Save the functions in a file, <code>bomcheck.py</code>. At the bottom, put the code that runs when someone types <code>python bomcheck.py ebom.csv mbom.csv</code> under <code>if __name__ == "__main__":</code>. That guard lets other code import your functions without running the report. Next unit's Streamlit app does exactly that.</p>
+<h3>The four files every project needs</h3>
+<ul>
+<li><code>README.md</code>: what it does, a screenshot, how to run it, what data it expects, known limits.</li>
+<li><code>requirements.txt</code>: the libraries to install, one per line.</li>
+<li>Sample data: small, synthetic, so anyone can try it in two minutes.</li>
+<li>The code, in files with clear names.</li>
+</ul>
+<h3>Version control in one paragraph</h3>
+<p>Git records snapshots of your files ("commits") with a message saying what changed. GitHub stores them online. You need four ideas: a repository holds a project; a commit is a saved snapshot; a branch is a separate line of work; a pull request asks to merge a branch. For this course, committing through the GitHub website or from Colab is enough. Use short messages that say why: "Add roll-up so quantities are per vehicle".</p>
+<div class="callout"><h4>In your job</h4><p>Your portfolio is evidence. A public repository with a clear README and a screenshot does more in a customer meeting or an interview than any certificate. Keep it free of customer names and data, always.</p></div>
+<div class="quiz">
+<div class="q" data-a="a"><p>What does <code>if __name__ == "__main__":</code> allow?</p><ol><li data-o="a">The file to be run as a script and also imported by other code without running the report</li><li data-o="b">The code to run faster</li><li data-o="c">The file to be opened in Excel</li></ol><p class="why">Code under the guard runs only when the file is executed directly.</p></div>
+<div class="q" data-a="c"><p>A cell is used 24 times per module, and there are 4 modules per pack and 1 pack per vehicle. Cells per vehicle?</p><ol><li data-o="a">28</li><li data-o="b">24</li><li data-o="c">96</li></ol><p class="why">Multiply along the path: 24 × 4 × 1.</p></div>
+</div>
+</article>
+
+<article data-id="m1w4d2" data-type="lab" data-title="Project 1: the BOM health checker" data-mins="120" data-watch="streamlit tutorial file uploader dataframe; github upload files README" data-read="Streamlit documentation, get started">
+<p class="lede">This session runs long. You will build <code>bomcheck.py</code>, test it, wrap it in a Streamlit web page and publish both. When you finish, mark Project 1 as shipped on the Projects page.</p>
+<h3>Step 1: the module</h3>
+<p>In Colab, create a new notebook <code>p1-bomcheck</code>. Upload <code>ebom.csv</code> and <code>mbom.csv</code>. In a cell, write the file with the <code>%%writefile</code> command, which saves the cell's contents to disk:</p>
+<pre><code>%%writefile bomcheck.py
+"""BOM health checker: compare an EBOM and an MBOM and report every mismatch."""
+import sys
+import pandas as pd
+
+PLANT_PREFIXES = ("C-", "M-")   # consumables and kits that only exist in the MBOM
+
+
+def load_bom(path):
+    bom = pd.read_csv(path, keep_default_na=False)
+    required = {"part_no", "description", "parent", "qty"}
+    missing = required - set(bom.columns)
+    if missing:
+        raise ValueError(f"{path} is missing columns: {sorted(missing)}")
+    bom["part_no"] = bom["part_no"].astype(str).str.strip().str.upper()
+    bom["parent"] = bom["parent"].astype(str).str.strip().str.upper()
+    return bom
+
+
+def explode(bom, root, mult=1, level=1, out=None):
+    """Walk down from root; one row per line with its quantity per top unit."""
+    if out is None:
+        out = []
+    for _, line in bom[bom["parent"] == root].iterrows():
+        per_unit = mult * line["qty"]
+        out.append({"part_no": line["part_no"], "description": line["description"],
+                    "level": level, "qty_per_unit": per_unit})
+        explode(bom, line["part_no"], per_unit, level + 1, out)
+    return pd.DataFrame(out)
+
+
+def rolled_up(bom):
+    root = bom.loc[bom["parent"] == "", "part_no"].iloc[0]
+    lines = explode(bom, root)
+    return lines.groupby("part_no", as_index=False).agg(
+        description=("description", "first"), qty=("qty_per_unit", "sum"))
+
+
+def compare(ebom, mbom):
+    e, m = rolled_up(ebom), rolled_up(mbom)
+    cmp = e.merge(m, on="part_no", how="outer", suffixes=("_ebom", "_mbom"), indicator=True)
+
+    def classify(r):
+        if r["_merge"] == "left_only":
+            return "missing in MBOM"
+        if r["_merge"] == "right_only":
+            return "plant item" if r["part_no"].startswith(PLANT_PREFIXES) else "not in EBOM"
+        return "ok" if r["qty_ebom"] == r["qty_mbom"] else "quantity mismatch"
+
+    cmp["status"] = cmp.apply(classify, axis=1)
+    cmp["description"] = cmp["description_ebom"].fillna(cmp["description_mbom"])
+    return cmp[["part_no", "description", "qty_ebom", "qty_mbom", "status"]].sort_values(["status", "part_no"])
+
+
+def orphans(bom):
+    """Lines whose parent does not exist as a part in the same BOM."""
+    known = set(bom["part_no"])
+    return bom[(bom["parent"] != "") &amp; (~bom["parent"].isin(known))]
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3:
+        ebom_path, mbom_path = sys.argv[1], sys.argv[2]
+    else:
+        ebom_path, mbom_path = "ebom.csv", "mbom.csv"
+    ebom, mbom = load_bom(ebom_path), load_bom(mbom_path)
+    report = compare(ebom, mbom)
+    issues = report[~report["status"].isin(["ok", "plant item"])]
+    print(report["status"].value_counts().to_string())
+    print()
+    print(issues.to_string(index=False))
+    print(f"\nOrphan lines in MBOM: {len(orphans(mbom))}")
+    with pd.ExcelWriter("bom_report.xlsx") as xl:
+        issues.to_excel(xl, sheet_name="issues", index=False)
+        report.to_excel(xl, sheet_name="all parts", index=False)
+    print("Saved bom_report.xlsx")</code></pre>
+<h3>Step 2: run it</h3>
+<pre><code>!python bomcheck.py ebom.csv mbom.csv</code></pre>
+<p>The <code>!</code> runs a shell command from a notebook cell. You should see 38 parts OK, 3 missing, 3 plant items, 2 quantity mismatches and 1 part not in the EBOM. Notice the cells: the EBOM says 96 per vehicle and the MBOM says 80. Last unit's direct comparison showed 24 against 20; the roll-up shows the real impact per vehicle.</p>
+<h3>Step 3: test it on purpose</h3>
+<ol>
+<li>Delete the <code>qty</code> column from a copy of <code>mbom.csv</code> and run again. You should get the clear error message from <code>load_bom</code>.</li>
+<li>Add a line to the MBOM whose parent is <code>E3-7000</code>, which does not exist. Check that <code>orphans</code> finds it.</li>
+</ol>
+<h3>Step 4: a web page with Streamlit</h3>
+<p>Streamlit turns a Python script into a web page. Create <code>app.py</code>:</p>
+<pre><code>%%writefile app.py
+import pandas as pd
+import streamlit as st
+from bomcheck import compare, orphans
+
+st.set_page_config(page_title="BOM health checker", layout="wide")
+st.title("BOM health checker")
+st.write("Upload an EBOM and an MBOM as CSV files with columns part_no, description, parent, qty.")
+
+e_file = st.file_uploader("EBOM", type="csv")
+m_file = st.file_uploader("MBOM", type="csv")
+
+if e_file and m_file:
+    ebom = pd.read_csv(e_file, keep_default_na=False)
+    mbom = pd.read_csv(m_file, keep_default_na=False)
+    report = compare(ebom, mbom)
+    issues = report[~report["status"].isin(["ok", "plant item"])]
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Parts compared", len(report))
+    c2.metric("Issues", len(issues))
+    c3.metric("Orphan MBOM lines", len(orphans(mbom)))
+
+    st.bar_chart(issues["status"].value_counts())
+    st.dataframe(issues, use_container_width=True)
+    st.download_button("Download issues as CSV", issues.to_csv(index=False), "bom_issues.csv")</code></pre>
+<p>Streamlit pages run on a computer, not inside a notebook. The simplest free way to see it is Streamlit Community Cloud in Step 6. If you have Python on your laptop, you can also run <code>pip install streamlit pandas</code> then <code>streamlit run app.py</code>.</p>
+<h3>Step 5: README and requirements</h3>
+<pre><code>%%writefile requirements.txt
+pandas
+openpyxl
+streamlit</code></pre>
+<p>Write <code>README.md</code> with these headings: What it does (two sentences), Screenshot, How to run, Input format, What it checks (the five statuses), Limits (for example: no revisions or effectivity, one top-level product per file). Write it yourself; it is the part a reader sees first.</p>
+<h3>Step 6: publish</h3>
+<ol>
+<li>In your <code>plm-ai-portfolio</code> repository, create a folder <code>p1-bomcheck</code> and upload <code>bomcheck.py</code>, <code>app.py</code>, <code>requirements.txt</code>, <code>README.md</code>, <code>ebom.csv</code> and <code>mbom.csv</code>.</li>
+<li>Go to <a href="https://streamlit.io/cloud" target="_blank" rel="noopener">Streamlit Community Cloud</a>, sign in with GitHub, choose New app, select your repository and set the main file path to <code>p1-bomcheck/app.py</code>. Deploy.</li>
+<li>Upload the two sample CSVs in the live app, take a screenshot and add it to the README.</li>
+</ol>
+<h3>Done when</h3>
+<ul>
+<li>The script finds all six planted issues and runs from a fresh copy of the repository.</li>
+<li>The app is live and the README has a screenshot and the link.</li>
+<li>No real customer data is anywhere in the repository.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why does the roll-up show 96 against 80 for cells, when last unit showed 24 against 20?</p><ol><li data-o="a">The data changed</li><li data-o="b">The roll-up multiplies by the 4 modules per pack, giving quantities per vehicle</li><li data-o="c">Streamlit rounds numbers</li></ol><p class="why">Quantities per vehicle multiply along the path from the top.</p></div>
+<div class="q" data-a="a"><p>What does <code>load_bom</code> do to part numbers, and why?</p><ol><li data-o="a">Strips spaces and upper-cases them, so formatting differences do not break the join</li><li data-o="b">Converts them to integers for speed</li><li data-o="c">Removes the prefix</li></ol><p class="why">Normalising keys at the door prevents false mismatches.</p></div>
+</div>
+</article>
+
+<article data-id="m1w4d3" data-type="case" data-title="Case: the one-page value case" data-mins="75" data-watch="how to build a business case ROI payback for software project" data-read="Presales kit: the one-page value case template">
+<p class="lede">You have a working tool. Now you write the page that gets it funded. Use the value case template from the Presales kit.</p>
+<h3>The situation</h3>
+<p>Priya Deshmukh at Sahyadri Motors liked your demo of the BOM health checker on synthetic data. She wants to take it to Anjali Rao for a ₹30 lakh pilot: three months to connect it to their PLM and spreadsheet MBOMs for all active variants, agree the plant-item rules, and run reconciliation on every engineering change.</p>
+<p>What you know from earlier weeks: about 25 line stoppages a year from wrong parts at stations, about ₹4 lakh each. MBOM creation costs about 240 planner-days a year at about ₹8,200 a day. Engineering changes take a median of 19 working days to reach manufacturing, and Priya believes 4 of those days are spent manually checking which MBOM lines a change touches. Sahyadri processes about 600 changes a year, each touching on average 1.5 planners for those checks.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Write the "problem" and "baseline" sections in four sentences or fewer.</li>
+<li>Estimate annual benefits under a cautious assumption. Show each line separately.</li>
+<li>Calculate the payback period for the ₹30 lakh pilot plus ₹10 lakh a year to run it.</li>
+<li>Name the two biggest risks and how the pilot would test them.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Problem: Sahyadri's MBOMs drift out of step with engineering, causing wrong-part line stoppages and slow, manual change checks. Baseline: about 25 stoppages a year at about ₹4 lakh each, a median of 19 days from change request to manufacturing release, and about 4 days of each change spent checking MBOM impact by hand.</p>
+<p><strong>2.</strong> Cautious assumptions: stoppages halve (12 avoided × ₹4 lakh = ₹48 lakh). For change checks, a naive reading gives 600 changes × 1.5 planners × 4 days × 50% = 1,800 planner-days saved. That is impossible for 12 planners with about 2,640 working days a year between them, so Priya's "4 days" must be elapsed time, not effort. Use effort instead: assume 0.5 planner-day of checking per change, halved, so 600 × 0.25 = 150 planner-days × ₹8,200 ≈ ₹12 lakh. Total ≈ ₹60 lakh a year, before any reduction in the 19-day cycle, which you would mention but not count.</p>
+<p><strong>3.</strong> First-year cost ₹40 lakh against ₹60 lakh of benefits: payback in about 8 months. From year two, ₹10 lakh of cost against ₹60 lakh of benefits.</p>
+<p><strong>4.</strong> Risk one: the stoppage reduction depends on which stoppages are really BOM-related. Test it by tagging every stoppage during the pilot. Risk two: planners may not trust or use the report. Test it by putting the report inside their change workflow and measuring how many flagged issues are acted on.</p>
+<p><strong>What the case teaches.</strong> Sanity-check every number against capacity. A benefit that needs more planner-days than the team has will be spotted by the CFO, and it costs you credibility for the rest of the case. Elapsed days and effort days are different units; mixing them is the most common error in software ROI cases.</p>
+</details>
+</article>
+
+<article data-id="m1w4d4" data-type="review" data-title="Part 1 review and work assignment" data-mins="75" data-watch="python pandas review for beginners" data-read="Key ideas page, Part 1">
+<p class="lede">Eight questions across this part, then your first portfolio post. Take the quick quiz for Part 1 on the Exams page afterwards.</p>
+<div class="quiz graded">
+<div class="q" data-a="b"><p>A customer's AI idea has a clear owner and money attached but the data needs months of work. What is the best framing?</p><ol><li data-o="a">Decline the opportunity</li><li data-o="b">Position the data work as phase 1, with its own measurable savings</li><li data-o="c">Promise the model anyway and fix data later</li><li data-o="d">Ask the customer to buy more storage</li></ol><p class="why">Data work that pays back on its own is easier to fund and sets up the AI phase.</p></div>
+<div class="q" data-a="a"><p>Which function in <code>bomcheck.py</code> multiplies quantities down the structure?</p><ol><li data-o="a"><code>explode</code></li><li data-o="b"><code>load_bom</code></li><li data-o="c"><code>orphans</code></li><li data-o="d"><code>classify</code></li></ol><p class="why"><code>explode</code> walks down from the top, carrying the multiplier.</p></div>
+<div class="q" data-a="d"><p>Which file tells others which libraries to install?</p><ol><li data-o="a">README.md</li><li data-o="b">app.py</li><li data-o="c">ebom.csv</li><li data-o="d">requirements.txt</li></ol><p class="why">One library per line; Streamlit Cloud reads it automatically.</p></div>
+<div class="q" data-a="c"><p>A team of 12 planners works about 2,640 days a year. A benefit estimate claims 1,800 planner-days saved on one task. What should you conclude?</p><ol><li data-o="a">The project is very valuable</li><li data-o="b">Hire more planners</li><li data-o="c">The estimate probably mixes elapsed time with effort and must be redone</li><li data-o="d">Round it to 2,000</li></ol><p class="why">Savings cannot plausibly be two thirds of the whole team's time on one task.</p></div>
+<div class="q" data-a="b"><p>Which is a validity problem?</p><ol><li data-o="a">An MBOM line missing</li><li data-o="b">A BOM line with a quantity of zero</li><li data-o="c">A description that differs between systems</li><li data-o="d">A revision that is out of date</li></ol><p class="why">Validity is about breaking the rules of what a value may be.</p></div>
+<div class="q" data-a="a"><p>Why use synthetic data in your public portfolio?</p><ol><li data-o="a">Customer and employer data must never be published, and synthetic data lets anyone run the tool</li><li data-o="b">Synthetic data is more accurate</li><li data-o="c">GitHub does not allow CSV files</li><li data-o="d">Models train faster on it</li></ol><p class="why">Confidentiality first, and a two-minute demo second.</p></div>
+<div class="q" data-a="c"><p>"Which decision costs you most today?" is a good reply to "what do you have for AI?" because:</p><ol><li data-o="a">It avoids talking about products</li><li data-o="b">It delays the sale</li><li data-o="c">It anchors the conversation on value and identifies the owner and the data</li><li data-o="d">Customers prefer questions</li></ol><p class="why">Decision, then data, then model.</p></div>
+<div class="q" data-a="d"><p>In a reconciliation, an MBOM item starting with <code>C-</code> appears only on the MBOM side. The lab classifies it as:</p><ol><li data-o="a">Missing in MBOM</li><li data-o="b">Quantity mismatch</li><li data-o="c">Not in EBOM</li><li data-o="d">Plant item</li></ol><p class="why">Consumables are legitimate plant additions by the agreed rule.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: your first portfolio post</h3>
+<ol>
+<li>Check that Project 1 meets its "done when" list and mark it shipped on the Projects page.</li>
+<li>Write the one-page value case for the BOM health checker using the Presales kit template, with Sahyadri's numbers. Save it as <code>VALUE.md</code> next to the code.</li>
+<li>Optional: write a short LinkedIn post about what you learned building it. No customer names, no employer data.</li>
+</ol></div>
+</article>
+
+</section>

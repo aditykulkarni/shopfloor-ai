@@ -1,0 +1,318 @@
+<section data-week="5" data-title="How machines learn from examples" data-goal="Train a first classifier on machine data and judge it with the right metrics, not accuracy.">
+
+<article data-id="m2w5d1" data-type="lesson" data-title="Supervised learning, honestly explained" data-mins="80" data-watch="supervised learning explained train test split overfitting; precision and recall explained" data-read="An Introduction to Statistical Learning, chapter 2, sections 2.1 and 2.2">
+<p class="lede">Nearly all industrial machine learning is supervised learning on tables. Learn its five ideas well and you can question any vendor's model, including your own.</p>
+<h3>Idea 1: features and a label</h3>
+<p>Each row is one example: one machine at one moment, one part, one pack. The <strong>features</strong> are what you know at the time of the decision (temperature, torque, tool wear). The <strong>label</strong> is what you want to predict (did it fail within the next shift?). The model learns a function from features to label.</p>
+<p>If the label is a category (fail or not, OK or defective) it is <strong>classification</strong>. If it is a number (minutes of tool life left, kilograms of scrap) it is <strong>regression</strong>.</p>
+<h3>Idea 2: you cannot test on what you trained on</h3>
+<p>A model can memorise its training rows. So you hold some rows back, usually 20 to 30%, train on the rest and measure on the held-back <strong>test set</strong>. The test score estimates how the model will do on data it has never seen, which is the only score that matters.</p>
+<h3>Idea 3: overfitting and underfitting</h3>
+<p>A model that is too simple misses real patterns (underfitting: poor on training and test data). A model that is too flexible learns noise (overfitting: excellent on training data, poor on test data). The gap between training and test scores is your warning light. Every model has knobs, such as tree depth, that trade one off against the other.</p>
+<h3>Idea 4: accuracy lies when failures are rare</h3>
+<p>In the AI4I dataset you will use, about 3.4% of rows are failures. A "model" that always says "no failure" is 96.6% accurate and completely useless. For rare events, use the <strong>confusion matrix</strong>:</p>
+<table class="stmt">
+<thead><tr><th></th><th>Predicted failure</th><th>Predicted OK</th></tr></thead>
+<tbody>
+<tr><td>Actual failure</td><td>True positive (TP): caught</td><td>False negative (FN): missed</td></tr>
+<tr><td>Actual OK</td><td>False positive (FP): false alarm</td><td>True negative (TN)</td></tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Recall</strong> = TP ÷ (TP + FN): of the real failures, how many did we catch?</li>
+<li><strong>Precision</strong> = TP ÷ (TP + FP): of our alarms, how many were real?</li>
+<li><strong>F1</strong> = the harmonic mean of the two, a single number when you need one.</li>
+</ul>
+<p>A maintenance manager cares about recall (missed failures stop the line) and precision (too many false alarms and the team stops listening). Which matters more is a business decision, not a technical one.</p>
+<h3>Idea 5: leakage</h3>
+<p>Leakage is when a feature contains information that would not be available at decision time, often a disguised version of the label. In AI4I, the columns TWF, HDF, PWF, OSF and RNF record which failure mode happened. Using them to predict "machine failure" gives near-perfect scores and a model that is worthless in production. Leakage is the most common reason a pilot looks brilliant and then fails.</p>
+<div class="callout"><h4>In your job</h4><p>When anyone shows you a model with 99% accuracy, ask three questions: what share of the data is the positive class, what are precision and recall on a held-out test set, and could any feature be known only after the event? Those three questions catch most overclaimed results.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>A model predicts remaining tool life in minutes. This is:</p><ol><li data-o="a">Classification</li><li data-o="b">Regression</li><li data-o="c">Generative AI</li></ol><p class="why">The label is a number, so it is regression.</p></div>
+<div class="q" data-a="a"><p>A model scores 99% on training data and 81% on test data. The most likely problem is:</p><ol><li data-o="a">Overfitting</li><li data-o="b">Underfitting</li><li data-o="c">Too little training data on the test set</li></ol><p class="why">A big gap between training and test performance means the model learned noise.</p></div>
+<div class="q" data-a="c"><p>Of 50 real failures, the model flags 40. It also raises 160 false alarms. What are recall and precision?</p><ol><li data-o="a">Recall 20%, precision 80%</li><li data-o="b">Recall 80%, precision 80%</li><li data-o="c">Recall 80%, precision 20%</li></ol><p class="why">Recall = 40 ÷ 50 = 80%. Precision = 40 ÷ (40 + 160) = 20%.</p></div>
+</div>
+</article>
+
+<article data-id="m2w5d2" data-type="lab" data-title="Lab: a first failure model on AI4I" data-mins="100" data-watch="scikit-learn decision tree classifier tutorial; confusion matrix scikit-learn" data-read="Kaggle Learn Intro to Machine Learning, lessons 1 to 4">
+<p class="lede">You will load real-shaped machine data, explore it, train a decision tree, and see for yourself why accuracy misleads. Work in a new Colab notebook called <code>w05-ai4i</code>.</p>
+<h3>Step 1: get the data</h3>
+<pre><code>!wget -q -O ai4i.zip "https://archive.ics.uci.edu/static/public/601/ai4i+2020+predictive+maintenance+dataset.zip"
+!unzip -o -q ai4i.zip
+!ls</code></pre>
+<p>You should see <code>ai4i2020.csv</code>. If the download fails, open the <a href="https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset" target="_blank" rel="noopener">dataset page</a>, download it by hand and upload the CSV to Colab.</p>
+<h3>Step 2: look before you model</h3>
+<pre><code>import pandas as pd
+df = pd.read_csv("ai4i2020.csv")
+print(df.shape)
+print(df.columns.tolist())
+df.head()</code></pre>
+<pre><code>print(df["Machine failure"].value_counts())
+print("Failure rate:", round(df["Machine failure"].mean() * 100, 2), "%")
+print(df[["TWF", "HDF", "PWF", "OSF", "RNF"]].sum())</code></pre>
+<p>The dataset describes a milling process. Each row is a product being machined: its quality variant (Type L, M or H), air and process temperature, spindle speed, torque and accumulated tool wear. About 3.4% of rows end in a machine failure. The five extra columns say which failure mode it was: tool wear, heat dissipation, power, overstrain or random.</p>
+<pre><code>df.groupby("Machine failure")[["Air temperature [K]", "Process temperature [K]",
+                               "Rotational speed [rpm]", "Torque [Nm]", "Tool wear [min]"]].mean().round(1)</code></pre>
+<p>Compare the two rows. Failed cases have higher torque and more tool wear on average. That is the signal a model will learn.</p>
+<h3>Step 3: features and label, without leakage</h3>
+<pre><code>features = ["Air temperature [K]", "Process temperature [K]",
+            "Rotational speed [rpm]", "Torque [Nm]", "Tool wear [min]"]
+X = df[features].copy()
+X["Type"] = df["Type"].map({"L": 0, "M": 1, "H": 2})
+y = df["Machine failure"]
+X.head()</code></pre>
+<p>We leave out <code>UDI</code> and <code>Product ID</code> (identifiers, not physics) and the five failure-mode columns (leakage: they describe the failure itself). <code>Type</code> is text, so we turn it into numbers.</p>
+<h3>Step 4: split, train, predict</h3>
+<pre><code>from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+tree = DecisionTreeClassifier(max_depth=4, random_state=42)
+tree.fit(X_train, y_train)
+pred = tree.predict(X_test)</code></pre>
+<p><code>stratify=y</code> keeps the same failure rate in both parts. <code>random_state</code> makes the split repeatable, so your numbers match each time you run it.</p>
+<h3>Step 5: the right scorecard</h3>
+<pre><code>from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+print("Accuracy:", round(accuracy_score(y_test, pred), 3))
+print(confusion_matrix(y_test, pred))
+print(classification_report(y_test, pred, digits=3))</code></pre>
+<p>The confusion matrix prints as <code>[[TN, FP], [FN, TP]]</code>. Read the row for class 1 in the report: that is precision and recall for failures. Write them in your notes.</p>
+<pre><code>always_ok = [0] * len(y_test)
+print("Accuracy of always saying OK:", round(accuracy_score(y_test, always_ok), 3))</code></pre>
+<p>This baseline catches no failures and still scores about 96.6%. Keep this line in every notebook as a reminder.</p>
+<h3>Step 6: look inside the tree</h3>
+<pre><code>from sklearn.tree import export_text
+print(export_text(tree, feature_names=list(X.columns)))</code></pre>
+<p>A shallow tree is readable: you can see thresholds on torque, tool wear and speed. That readability is a real advantage when you have to explain a model to a maintenance team.</p>
+<h3>Step 7: overfit it on purpose</h3>
+<pre><code>for depth in [2, 4, 8, 16, None]:
+    t = DecisionTreeClassifier(max_depth=depth, random_state=42).fit(X_train, y_train)
+    print(depth, "train", round(t.score(X_train, y_train), 3), "test", round(t.score(X_test, y_test), 3))</code></pre>
+<p>As depth grows, training accuracy reaches 1.0 and the test score stops improving. The widening gap is overfitting in action.</p>
+<h3>Your own questions</h3>
+<ol>
+<li>Add the leakage columns to <code>X</code>, retrain and look at the recall. Then remove them again and write one sentence on why that result was fake.</li>
+<li>Which depth gives the best recall for failures on the test set?</li>
+</ol>
+<div class="quiz">
+<div class="q" data-a="a"><p>Why leave out the TWF, HDF, PWF, OSF and RNF columns?</p><ol><li data-o="a">They record the failure mode, which is only known after the failure, so they leak the label</li><li data-o="b">They contain text</li><li data-o="c">They have missing values</li></ol><p class="why">Features must be available at decision time.</p></div>
+<div class="q" data-a="b"><p>What does <code>stratify=y</code> do in the split?</p><ol><li data-o="a">Sorts rows by failure</li><li data-o="b">Keeps the same failure rate in the training and test sets</li><li data-o="c">Removes duplicate rows</li></ol><p class="why">With rare events, an unlucky split could leave the test set with very few failures.</p></div>
+</div>
+</article>
+
+<article data-id="m2w5d3" data-type="case" data-title="Case: the 99% accurate pilot" data-mins="75" data-watch="predictive maintenance pilot lessons learned false alarms" data-read="AI for Everyone, unit 2, building AI projects">
+<p class="lede">A competitor's pilot result lands on the customer's table. Your job is to read it critically and fairly, without sounding defensive.</p>
+<h3>The situation</h3>
+<p>Godavari Foods is a fictional packaged-snacks maker with eight form-fill-seal packaging lines at its Nashik plant. Unplanned stoppages on the lines cost about ₹45,000 an hour in lost output, and each line averages 60 hours of unplanned downtime a year, mostly from sealing-jaw and film-drive faults.</p>
+<p>A start-up ran a three-month predictive maintenance pilot on two lines. Its summary slide says: "Our model is 99.1% accurate. Projected savings ₹2.2 crore a year across the plant." The plant head, Sunita Patil, forwards it to you and asks: "Should we roll this out? Your platform could host it."</p>
+<p>You ask for the details. The pilot evaluated the model on 12,000 one-hour windows. 110 windows were followed by a stoppage. The model flagged 140 windows; 60 of them were followed by a stoppage. The start-up assumed every flagged stoppage would be fully avoided.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Build the confusion matrix and calculate recall and precision.</li>
+<li>Is "99.1% accurate" a meaningful number here? Compare it with always predicting "no stoppage".</li>
+<li>Re-estimate the savings with explicit assumptions. Where does the ₹2.2 crore come from, and is it credible?</li>
+<li>What would you advise Sunita, and how would you say it without attacking the start-up?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> TP = 60, FP = 140 − 60 = 80, FN = 110 − 60 = 50, TN = 12,000 − 60 − 80 − 50 = 11,810. Recall = 60 ÷ 110 = 55%. Precision = 60 ÷ 140 = 43%.</p>
+<p><strong>2.</strong> Accuracy = (60 + 11,810) ÷ 12,000 = 98.9%, close to their claim. Always predicting "no stoppage" scores 11,890 ÷ 12,000 = 99.1%. So the headline accuracy is no better than doing nothing. It says nothing about value.</p>
+<p><strong>3.</strong> Plant downtime cost: 8 lines × 60 hours × ₹45,000 = ₹2.16 crore a year, which is where ₹2.2 crore comes from. It assumes every hour of downtime is avoided. More realistic: the model catches 55% of stoppages, and an early warning might avoid perhaps half the downtime of a caught stoppage, because some faults still need a stop to fix. That gives about 55% × 50% × ₹2.16 crore ≈ ₹59 lakh a year, minus the cost of 80 false alarms per 110 stoppages (each an inspection, perhaps 30 minutes of a technician). Still possibly worth doing, but about a quarter of the claim.</p>
+<p><strong>4.</strong> Advise a second phase, not a roll-out: run the model live on two lines for three months, record every alert and what the technician found, and measure downtime per line against the other six lines. Position it as "protecting the result": "The pilot found a real signal. Before scaling, let us measure the savings the way your finance team will."</p>
+<p><strong>What the case teaches.</strong> Accuracy on rare events is meaningless, and savings claims usually assume 100% recall and 100% avoidance. Re-doing the arithmetic calmly, with the customer, builds more trust than any product claim.</p>
+</details>
+</article>
+
+<article data-id="m2w5d4" data-type="review" data-title="Unit 5 review and work assignment" data-mins="60" data-watch="confusion matrix precision recall F1 review" data-read="Key ideas page, Part 2">
+<p class="lede">Six questions on supervised learning and its metrics, then a task on a model claim from your own world.</p>
+<div class="quiz graded">
+<div class="q" data-a="c"><p>Which of these is a label rather than a feature?</p><ol><li data-o="a">Spindle speed</li><li data-o="b">Tool wear in minutes</li><li data-o="c">Whether the machine failed</li><li data-o="d">Product type</li></ol><p class="why">The label is what you predict.</p></div>
+<div class="q" data-a="a"><p>Why hold back a test set?</p><ol><li data-o="a">To estimate performance on data the model has never seen</li><li data-o="b">To train faster</li><li data-o="c">To remove outliers</li><li data-o="d">To balance the classes</li></ol><p class="why">Training scores flatter the model because it has seen those rows.</p></div>
+<div class="q" data-a="d"><p>A model raises 20 alarms; 15 are real failures. Out of 30 real failures in the period, what is its precision?</p><ol><li data-o="a">50%</li><li data-o="b">67%</li><li data-o="c">20%</li><li data-o="d">75%</li></ol><p class="why">Precision = 15 ÷ 20 = 75%. Recall would be 15 ÷ 30 = 50%.</p></div>
+<div class="q" data-a="b"><p>The confusion matrix from scikit-learn prints as <code>[[TN, FP], [FN, TP]]</code>. If it shows <code>[[2400, 15], [40, 45]]</code>, how many failures were missed?</p><ol><li data-o="a">15</li><li data-o="b">40</li><li data-o="c">45</li><li data-o="d">2,400</li></ol><p class="why">FN is bottom left: real failures predicted as OK.</p></div>
+<div class="q" data-a="c"><p>In the Godavari case, the model's 98.9% accuracy was:</p><ol><li data-o="a">Excellent, because it is above 95%</li><li data-o="b">Proof the savings were real</li><li data-o="c">No better than always predicting "no stoppage"</li><li data-o="d">Wrong arithmetic by the start-up</li></ol><p class="why">With 99.1% of windows normal, doing nothing scores 99.1%.</p></div>
+<div class="q" data-a="a"><p>A feature that would only be known after the event is an example of:</p><ol><li data-o="a">Leakage</li><li data-o="b">Underfitting</li><li data-o="c">Stratification</li><li data-o="d">Regression</li></ol><p class="why">Leakage makes a pilot look brilliant and fail in production.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: audit a claim</h3>
+<p>Find one public AI claim in manufacturing: a vendor case study, a press release or a conference talk. Write half a page answering: what was predicted, what share of cases were positive, which metric was quoted, what was not quoted, and what you would ask before believing the savings. Keep it in your notes; it is practice for every competitor slide you will ever see.</p></div>
+</article>
+
+</section>
+
+<section data-week="6" data-title="Ship Project 2" data-goal="Build a better model, choose its alarm threshold from the cost of errors, and publish it with an honest ROI sheet.">
+
+<article data-id="m2w6d1" data-type="lesson" data-title="Better models, thresholds and money" data-mins="80" data-watch="random forest explained simply; gradient boosting explained; choosing classification threshold cost" data-read="An Introduction to Statistical Learning, chapter 8, sections 8.2.1 and 8.2.2">
+<p class="lede">One tree is easy to read and easy to fool. Many trees together are much harder to fool. Then the most important decision is not the model but the threshold, and that is a money decision.</p>
+<h3>Ensembles: many weak opinions</h3>
+<p>A <strong>random forest</strong> trains hundreds of trees, each on a random sample of rows and features, and lets them vote. Individual trees overfit in different ways, so their errors partly cancel. <strong>Gradient boosting</strong> (XGBoost, LightGBM, scikit-learn's HistGradientBoosting) builds trees one after another, each correcting the previous ones' errors. On tabular data these two families win most practical problems. Deep learning rarely beats them on tables.</p>
+<h3>Probabilities, not just yes or no</h3>
+<p>Most classifiers output a probability: "this window has a 0.23 chance of ending in failure". The default rule turns anything above 0.5 into an alarm. Nothing makes 0.5 special. Lower the threshold and you catch more failures (higher recall) but raise more false alarms (lower precision). Raise it and the reverse happens.</p>
+<h3>Choose the threshold from costs</h3>
+<p>Put a price on each kind of error:</p>
+<div class="formula">Total cost = FN × cost of a missed failure + FP × cost of a false alarm</div>
+<p>If a missed failure costs ₹2 lakh (downtime, scrap, emergency repair) and a false alarm costs ₹5,000 (a technician's inspection), a miss is 40 times worse than a false alarm. The best threshold will be low, accepting many false alarms. If false alarms trigger a full line stop, the ratio changes and so does the threshold. Try every threshold on the test set and pick the one with the lowest total cost.</p>
+<h3>Imbalance</h3>
+<p>With 3% positives, a model can learn to ignore the rare class. Two simple fixes: tell the model to weight the rare class more (<code>class_weight="balanced"</code>), and judge it by precision, recall and cost rather than accuracy. Fancier resampling methods exist but rarely help as much as a good threshold.</p>
+<h3>Cross-validation</h3>
+<p>One test split can be lucky or unlucky. <strong>Cross-validation</strong> splits the data into, say, five parts, trains five times with a different part held out each time, and averages the scores. Use it to compare models fairly. Keep a final test set aside for the very end.</p>
+<h3>Feature engineering with physics</h3>
+<p>Engineers have an advantage here. Power is torque times angular speed. Overstrain relates to tool wear times torque. Heat dissipation depends on the temperature difference between process and air. Adding these as columns often helps a model more than switching algorithms, and makes it easier to explain.</p>
+<div class="callout"><h4>In your job</h4><p>When a customer asks "how accurate is it?", answer with the cost table: "At this threshold we catch 8 of 10 failures and raise 3 false alarms a week. Here is what each costs you." It turns a technical metric into a decision the plant head can own.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>Lowering the alarm threshold from 0.5 to 0.2 usually:</p><ol><li data-o="a">Raises precision and lowers recall</li><li data-o="b">Raises recall and lowers precision</li><li data-o="c">Changes neither</li></ol><p class="why">More cases cross a lower bar, so you catch more real failures and raise more false alarms.</p></div>
+<div class="q" data-a="c"><p>Which model family usually wins on tabular manufacturing data?</p><ol><li data-o="a">Large language models</li><li data-o="b">Convolutional neural networks</li><li data-o="c">Tree ensembles such as random forests and gradient boosting</li></ol><p class="why">Tree ensembles are the standard choice for tables.</p></div>
+<div class="q" data-a="a"><p>A miss costs ₹2 lakh and a false alarm ₹5,000. At threshold A the model has 10 misses and 100 false alarms; at threshold B, 4 misses and 400 false alarms. Which is cheaper?</p><ol><li data-o="a">A</li><li data-o="b">They cost the same</li><li data-o="c">B</li></ol><p class="why">A: 10 × 2 lakh + 100 × 5,000 = ₹25 lakh. B: 4 × 2 lakh + 400 × 5,000 = ₹28 lakh. Fewer misses did not pay for four times the false alarms.</p></div>
+</div>
+</article>
+
+<article data-id="m2w6d2" data-type="lab" data-title="Project 2: predictive maintenance with a cost-based threshold" data-mins="120" data-watch="random forest scikit-learn class_weight balanced; predict_proba threshold tuning" data-read="Kaggle Learn Intermediate Machine Learning, cross-validation and data leakage">
+<p class="lede">This is Project 2. You will engineer physics features, compare models with cross-validation, choose a threshold by cost and package an ROI calculation. Continue in a new notebook <code>p2-predictive-maintenance</code>.</p>
+<h3>Step 1: data and engineered features</h3>
+<pre><code>!wget -q -O ai4i.zip "https://archive.ics.uci.edu/static/public/601/ai4i+2020+predictive+maintenance+dataset.zip"
+!unzip -o -q ai4i.zip</code></pre>
+<pre><code>import numpy as np
+import pandas as pd
+
+df = pd.read_csv("ai4i2020.csv")
+
+def add_features(d):
+    d = d.copy()
+    d["temp_diff"] = d["Process temperature [K]"] - d["Air temperature [K]"]
+    d["power_w"] = d["Torque [Nm]"] * d["Rotational speed [rpm]"] * 2 * np.pi / 60
+    d["strain"] = d["Tool wear [min]"] * d["Torque [Nm]"]
+    d["type_code"] = d["Type"].map({"L": 0, "M": 1, "H": 2})
+    return d
+
+df = add_features(df)
+FEATURES = ["Air temperature [K]", "Process temperature [K]", "Rotational speed [rpm]",
+            "Torque [Nm]", "Tool wear [min]", "temp_diff", "power_w", "strain", "type_code"]
+X, y = df[FEATURES], df["Machine failure"]
+df.groupby("Machine failure")[["temp_diff", "power_w", "strain"]].mean().round(0)</code></pre>
+<p>The three new columns come from physics: heat dissipation depends on the temperature difference, power is torque times angular speed, and overstrain grows with wear times torque.</p>
+<h3>Step 2: a fair comparison with cross-validation</h3>
+<pre><code>from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+models = {
+    "tree": DecisionTreeClassifier(max_depth=6, random_state=42),
+    "forest": RandomForestClassifier(n_estimators=300, class_weight="balanced",
+                                     min_samples_leaf=2, random_state=42, n_jobs=-1),
+    "boosting": HistGradientBoostingClassifier(random_state=42),
+}
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+for name, model in models.items():
+    scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="average_precision")
+    print(f"{name:9s} average precision {scores.mean():.3f} ± {scores.std():.3f}")</code></pre>
+<p>Average precision summarises precision and recall across all thresholds in one number, and suits rare events better than accuracy. Pick the best model by its mean, and check that the spread is small. The test set is not touched yet.</p>
+<h3>Step 3: train the chosen model and get probabilities</h3>
+<pre><code>best = models["forest"]          # or whichever won in Step 2
+best.fit(X_train, y_train)
+proba = best.predict_proba(X_test)[:, 1]
+proba[:10].round(3)</code></pre>
+<h3>Step 4: choose the threshold by cost</h3>
+<pre><code>from sklearn.metrics import confusion_matrix
+
+COST_MISS = 200_000     # ₹ per missed failure: downtime, scrap, emergency repair
+COST_ALARM = 5_000      # ₹ per false alarm: one technician inspection
+
+rows = []
+for t in np.arange(0.05, 0.95, 0.05):
+    tn, fp, fn, tp = confusion_matrix(y_test, (proba &gt;= t).astype(int)).ravel()
+    rows.append({"threshold": round(t, 2), "caught": tp, "missed": fn, "false_alarms": fp,
+                 "recall": tp / (tp + fn), "precision": tp / (tp + fp) if tp + fp else 0,
+                 "cost_rs": fn * COST_MISS + fp * COST_ALARM})
+table = pd.DataFrame(rows)
+best_row = table.loc[table["cost_rs"].idxmin()]
+print(best_row)
+table.round(3)</code></pre>
+<p>Read the table from top to bottom: as the threshold rises, false alarms fall and misses rise. The cheapest row is your operating point. Change <code>COST_ALARM</code> to ₹50,000 (as if every alarm stopped the line) and rerun: the best threshold moves up.</p>
+<pre><code>ax = table.plot(x="threshold", y="cost_rs", title="Total cost of errors on the test set (₹)")
+ax.axvline(best_row["threshold"], linestyle="--")</code></pre>
+<h3>Step 5: what the model looks at</h3>
+<pre><code>importance = pd.Series(best.feature_importances_, index=FEATURES).sort_values()
+importance.plot(kind="barh", title="Feature importance")</code></pre>
+<p>Expect the engineered features near the top. If the model leaned on something odd, such as an identifier, you would investigate before anyone used it.</p>
+<h3>Step 6: the ROI sheet</h3>
+<pre><code>def annual_value(recall, alarms_per_failure, failures_per_year=120, avoid_share=0.5,
+                 cost_failure=200_000, cost_alarm=5_000, run_cost=600_000):
+    caught = failures_per_year * recall
+    saved = caught * avoid_share * cost_failure
+    alarm_cost = caught * alarms_per_failure * cost_alarm
+    return round(saved - alarm_cost - run_cost)
+
+r = best_row
+alarms_per_failure = r["false_alarms"] / max(r["caught"], 1)
+print("Net value per year: ₹", annual_value(r["recall"], alarms_per_failure))</code></pre>
+<p>Every number here is an assumption you must state: 120 failures a year on the target line, half of each caught failure's cost avoided, ₹6 lakh a year to run the system. Change them and watch the answer move. That sensitivity is the honest part of an ROI sheet.</p>
+<h3>Step 7: save and publish</h3>
+<pre><code>import joblib
+joblib.dump({"model": best, "features": FEATURES, "threshold": float(best_row["threshold"])}, "pm_model.joblib")
+loaded = joblib.load("pm_model.joblib")
+sample = add_features(df.head(5))[loaded["features"]]
+(loaded["model"].predict_proba(sample)[:, 1] &gt;= loaded["threshold"]).astype(int)</code></pre>
+<p>Save the notebook to your portfolio in <code>p2-predictive-maintenance</code>. Write a README with: the problem, the data source and its licence, the metric table at your chosen threshold, the feature importance chart, the ROI assumptions and the limits (synthetic data, one machine type, no time ordering).</p>
+<h3>Stretch</h3>
+<p>Download the NASA C-MAPSS data and predict remaining useful life (regression) for engine FD001. Use the mean absolute error in cycles as your metric.</p>
+<h3>Done when</h3>
+<ul>
+<li>No leakage columns or identifiers among the features.</li>
+<li>The README shows recall, precision and false alarms per caught failure at the chosen threshold, and the cost assumptions behind it.</li>
+<li>The ROI sheet states every assumption and shows what happens if the avoided share is 25% instead of 50%.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="c"><p>Why compare models with cross-validation on the training set rather than on the test set?</p><ol><li data-o="a">The test set is too small</li><li data-o="b">Cross-validation is faster</li><li data-o="c">Choosing a model by its test score makes the test score optimistic; the test set must stay untouched until the end</li></ol><p class="why">Every decision made by looking at the test set leaks a little of it into the model.</p></div>
+<div class="q" data-a="a"><p>If false alarms become ten times more expensive, the cost-optimal threshold usually:</p><ol><li data-o="a">Rises</li><li data-o="b">Falls</li><li data-o="c">Stays at 0.5</li></ol><p class="why">Expensive alarms push you towards fewer, more confident alarms.</p></div>
+</div>
+</article>
+
+<article data-id="m2w6d3" data-type="case" data-title="Case: pricing a false alarm" data-mins="75" data-watch="predictive maintenance business case ROI downtime cost" data-read="Presales kit: one-page value case template">
+<p class="lede">Two managers, two views of the same model. The threshold you recommend decides which of them is happy.</p>
+<h3>The situation</h3>
+<p>Back at Sahyadri Motors, the Chakan press shop runs four servo presses stamping cargo-body panels. A press failure stops the welding line downstream. Gaurav Joshi, the maintenance manager, estimates an unplanned press failure costs ₹3.5 lakh (repair, 6 hours of lost output, overtime). There were 32 such failures last year.</p>
+<p>A model trained on press sensor data gives these results on a test year, at three thresholds:</p>
+<table class="stmt">
+<thead><tr><th>Threshold</th><th class="n">Failures caught</th><th class="n">Missed</th><th class="n">False alarms</th></tr></thead>
+<tbody>
+<tr><td>0.2</td><td class="n">28</td><td class="n">4</td><td class="n">210</td></tr>
+<tr><td>0.4</td><td class="n">24</td><td class="n">8</td><td class="n">70</td></tr>
+<tr><td>0.6</td><td class="n">17</td><td class="n">15</td><td class="n">20</td></tr>
+</tbody>
+</table>
+<p>Gaurav says a false alarm means a 45-minute inspection by one technician, about ₹2,500. The production head, Nikhil Bhosale, disagrees: "Every alarm, my supervisor stops the press to be safe. That is an hour of output, about ₹60,000." A caught failure still costs about 40% of a missed one, because the repair is planned rather than avoided.</p>
+<h3>Your questions</h3>
+<ol>
+<li>Calculate the total cost at each threshold using Gaurav's alarm cost.</li>
+<li>Recalculate using Nikhil's alarm cost. Which threshold wins now?</li>
+<li>What does this tell you about where the value of the project really sits?</li>
+<li>What would you propose so that both managers support the roll-out?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Caught failure cost = 40% × ₹3.5 lakh = ₹1.4 lakh. Threshold 0.2: 28 × 1.4 + 4 × 3.5 + 210 × 0.025 = 39.2 + 14 + 5.25 = ₹58.5 lakh. Threshold 0.4: 24 × 1.4 + 8 × 3.5 + 70 × 0.025 = 33.6 + 28 + 1.75 = ₹63.4 lakh. Threshold 0.6: 17 × 1.4 + 15 × 3.5 + 20 × 0.025 = 23.8 + 52.5 + 0.5 = ₹76.8 lakh. Without the model: 32 × 3.5 = ₹112 lakh. Threshold 0.2 is best, saving about ₹53 lakh.</p>
+<p><strong>2.</strong> With ₹60,000 per alarm: 0.2 gives 39.2 + 14 + 126 = ₹179 lakh, worse than no model. 0.4 gives 33.6 + 28 + 42 = ₹103.6 lakh. 0.6 gives 23.8 + 52.5 + 12 = ₹88.3 lakh. Now 0.6 wins, saving about ₹24 lakh, less than half of Gaurav's view.</p>
+<p><strong>3.</strong> The value depends as much on what people do with an alarm as on the model. An alarm process that stops the press destroys most of the benefit. The real project is the model plus the response procedure.</p>
+<p><strong>4.</strong> Agree an alarm procedure first: an alarm triggers a quick check without stopping the press, and the press stops only if the check finds a defined condition. Measure the actual cost per alarm during a pilot. Show both managers the table: Nikhil sees that his concern is taken seriously and costed; Gaurav sees the bigger prize if the procedure works. Then set the threshold together, and revisit it after three months of real data.</p>
+<p><strong>What the case teaches.</strong> The threshold is a business decision, and the cost of a false alarm is set by the organisation's response, not by the model. Making that visible is one of the most valuable things a consultant can do in an AI project.</p>
+</details>
+</article>
+
+<article data-id="m2w6d4" data-type="review" data-title="Unit 6 review and work assignment" data-mins="60" data-watch="random forest vs gradient boosting; threshold tuning business cost" data-read="Key ideas page, Part 2">
+<p class="lede">Six questions on ensembles, thresholds and value, then a task that adds to your use-case library.</p>
+<div class="quiz graded">
+<div class="q" data-a="b"><p>A random forest improves on a single tree mainly because:</p><ol><li data-o="a">Each tree is deeper</li><li data-o="b">Many trees trained on different samples make different errors that partly cancel when they vote</li><li data-o="c">It uses neural networks</li><li data-o="d">It needs no training data</li></ol><p class="why">Averaging diverse models reduces variance.</p></div>
+<div class="q" data-a="d"><p>What does <code>class_weight="balanced"</code> do?</p><ol><li data-o="a">Removes rows of the majority class</li><li data-o="b">Duplicates failure rows</li><li data-o="c">Sets the threshold to 0.5</li><li data-o="d">Makes errors on the rare class count more during training</li></ol><p class="why">It reweights classes inversely to their frequency.</p></div>
+<div class="q" data-a="a"><p>Which engineered feature reflects the heat dissipation failure mode in AI4I?</p><ol><li data-o="a">Process temperature minus air temperature</li><li data-o="b">Tool wear times torque</li><li data-o="c">Product type code</li><li data-o="d">Row number</li></ol><p class="why">Heat dissipation failures happen when the temperature difference is small and speed is low.</p></div>
+<div class="q" data-a="c"><p>In the press case, why did the best threshold change between Gaurav's and Nikhil's view?</p><ol><li data-o="a">The model was retrained</li><li data-o="b">The failure cost changed</li><li data-o="c">The cost of a false alarm changed 24-fold because of how the plant responds to alarms</li><li data-o="d">Nikhil used a different dataset</li></ol><p class="why">₹2,500 versus ₹60,000 per alarm.</p></div>
+<div class="q" data-a="b"><p>Five-fold cross-validation means:</p><ol><li data-o="a">Training five different algorithms</li><li data-o="b">Training five times, each time holding out a different fifth of the data, and averaging the scores</li><li data-o="c">Testing on five machines</li><li data-o="d">Using five features</li></ol><p class="why">It gives a more stable estimate than one split.</p></div>
+<div class="q" data-a="d"><p>Which statement about an ROI sheet is most honest?</p><ol><li data-o="a">Use the highest plausible savings to win the deal</li><li data-o="b">Hide the assumptions to keep it simple</li><li data-o="c">Assume 100% of caught failures are fully avoided</li><li data-o="d">State each assumption and show how the result changes when key ones move</li></ol><p class="why">CFOs trust sensitivity, not single numbers.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: start your use-case library</h3>
+<p>Open the Presales kit page and copy the use-case library table into your own spreadsheet. Add three rows from your own accounts or industries (Transportation and Mobility, CPG-Retail, Home and Lifestyle, Marine and Offshore). For each, fill in the decision, data needed, value lever and the cost of a false alarm or a wrong answer. Mark Project 2 shipped when its "done when" list is met.</p></div>
+</article>
+
+</section>

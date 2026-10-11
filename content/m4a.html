@@ -1,0 +1,465 @@
+<section data-week="14" data-title="Tool calling" data-goal="Explain how a model uses tools, design good tool definitions, and connect a model to part master and BOM data.">
+
+<article data-id="m4w14d1" data-type="lesson" data-title="Giving a model hands" data-mins="80" data-watch="Anthropic building effective agents talk; function calling explained" data-read="Anthropic, building effective agents (blog post); Ollama blog, tool support">
+<p class="lede">Part 3 ended with a question the copilot could not answer: "Who supplies the windshield glass?" The answer sits in the part master, not in a document. In this part you give the model tools, then let it use them in a loop. That is what people mean by agentic AI.</p>
+<h3>What tool calling is, precisely</h3>
+<p>You send the model a list of tools, each with a name, a description and a JSON schema for its parameters. When the model decides a tool would help, it does not run anything. It replies with a structured request: "call <code>get_part</code> with <code>part_no = E3-4200</code>". <strong>Your code</strong> runs the function, and sends the result back as a new message. The model then answers, or asks for another tool.</p>
+<pre><code>user:       Who supplies the windshield glass?
+assistant:  [tool call] search_parts(text="windshield glass")
+tool:       [{"part_no": "E3-4200", "description": "Windshield glass", ...}]
+assistant:  [tool call] get_part(part_no="E3-4200")
+tool:       {"part_no": "E3-4200", "supplier": "ClearView Glass", ...}
+assistant:  The windshield glass E3-4200 is supplied by ClearView Glass.</code></pre>
+<p>This split is the most important safety property of agents: the model only <em>proposes</em> actions; your code decides whether and how they run. Every guard rail you will build sits in that gap.</p>
+<h3>Why tools beat bigger prompts</h3>
+<ul>
+<li><strong>Exact data.</strong> A query returns the real supplier, the real stock and the real quantity, with no chance of the model misreading a long table.</li>
+<li><strong>Current data.</strong> Tools read the system of record at the moment of the question.</li>
+<li><strong>Arithmetic done by code.</strong> "How many E3-9001 bolts per vehicle?" needs a BOM roll-up. A tool computes it; the model would guess.</li>
+<li><strong>Access control.</strong> The tool runs with the user's rights, so it returns only what the user may see.</li>
+<li><strong>Actions.</strong> Tools can also create, update and send things. That is where the risk is, and Unit 16 is about controlling it.</li>
+</ul>
+<h3>Designing good tools</h3>
+<p>The model chooses tools based only on their names, descriptions and parameter schemas. Tool design is therefore prompt design.</p>
+<table class="stmt">
+<thead><tr><th>Principle</th><th>Weak</th><th>Strong</th></tr></thead>
+<tbody>
+<tr><td>Clear, specific name</td><td><code>query</code></td><td><code>where_used</code></td></tr>
+<tr><td>Description says when to use it</td><td>"Gets data"</td><td>"List the assemblies that directly contain a part, with quantity per assembly. Use for impact questions."</td></tr>
+<tr><td>Parameters with formats</td><td><code>id: string</code></td><td><code>part_no: string, e.g. E3-2400</code></td></tr>
+<tr><td>Small, structured results</td><td>The whole BOM as text</td><td>A short list of records with only the needed fields</td></tr>
+<tr><td>Helpful errors</td><td>Exception and crash</td><td><code>{"error": "No part E3-240 in the part master"}</code>, so the model can correct itself</td></tr>
+<tr><td>Read and write kept apart</td><td><code>manage_change(action=...)</code></td><td><code>list_changes</code> (read) and <code>submit_impact_report</code> (write, gated)</td></tr>
+</tbody>
+</table>
+<p>Keep the number of tools modest. Models choose well among 5 to 15 clearly different tools and start to confuse similar ones beyond that. Part 5's MCP servers are a way to package tools so that different applications can reuse them.</p>
+<h3>Which models can call tools</h3>
+<p>Tool use is trained into a model. All major cloud models support it. Among open models, look for the "tools" tag on Ollama: Qwen 2.5 and later, Llama 3.1 and later, Mistral and others. Small models call tools reasonably for simple, well-described tools and get worse with many steps. You will see this, and it is a useful thing to have seen before you advise customers.</p>
+<div class="callout"><h4>In your job</h4><p>When a customer asks "can the AI read our PLM?", the precise answer is: "the model never reads your PLM directly. It asks for specific queries that our software runs with your user's rights, and returns only the result." That sentence addresses security, accuracy and auditability at once, and it is true of every well-built agent.</p></div>
+<div class="quiz">
+<div class="q" data-a="b"><p>When a model "calls a tool", what actually happens?</p><ol><li data-o="a">The model runs the function on the server</li><li data-o="b">The model returns a structured request; your code runs the function and returns the result</li><li data-o="c">The model writes Python and executes it</li></ol><p class="why">The model proposes, your code disposes.</p></div>
+<div class="q" data-a="c"><p>Why should a tool return <code>{"error": "No part E3-240"}</code> instead of raising an exception?</p><ol><li data-o="a">Errors are cheaper</li><li data-o="b">To hide problems</li><li data-o="c">The model can read the error and try again with a corrected input</li></ol><p class="why">Errors become observations the agent can act on.</p></div>
+<div class="q" data-a="a"><p>"How many E3-9001 bolts are in one vehicle?" is best answered by:</p><ol><li data-o="a">A tool that computes the BOM roll-up in code</li><li data-o="b">Asking the model to add up the BOM in its head</li><li data-o="c">Searching documents</li></ol><p class="why">Let code do arithmetic.</p></div>
+</div>
+</article>
+
+<article data-id="m4w14d2" data-type="lab" data-title="Lab: connect a model to the part master" data-mins="110" data-watch="ollama tool calling python example" data-read="ollama-python README, tools section; JSON Schema getting started (json-schema.org)">
+<p class="lede">You will write six read-only PLM tools over the Sahyadri part master, BOM and change list, describe them with JSON schemas, and watch a model choose and call them. The module you write today is the backbone of Projects 4, 5 and 6.</p>
+<h3>Step 1: data</h3>
+<pre><code>import urllib.request
+DATA = "https://aditykulkarni.github.io/shopfloor-ai/data/"
+for name in ["parts.csv", "ebom.csv", "changes.csv", "docs.json"]:
+    urllib.request.urlretrieve(DATA + name, name)</code></pre>
+<pre><code>import pandas as pd
+print(pd.read_csv("parts.csv").head(3).to_string())
+print(pd.read_csv("changes.csv")[["change_id", "title", "status", "affected_parts"]].to_string())</code></pre>
+<p><code>parts.csv</code> is the part master: revision, lifecycle state, supplier, cost and stock at Chakan. <code>changes.csv</code> lists five changes, including two new requests that Project 4 will analyse.</p>
+<h3>Step 2: the tools module</h3>
+<pre><code>%%writefile plmtools.py
+"""Read-only PLM tools over the Sahyadri synthetic data.
+Used by the agent in Part 4 and the MCP servers in Part 5."""
+import pandas as pd
+
+BUILD_RATE_PER_MONTH = 1500
+PARTS = pd.read_csv("parts.csv").fillna("")
+EBOM = pd.read_csv("ebom.csv").fillna("")
+CHANGES = pd.read_csv("changes.csv").fillna("")
+
+
+def _clean(part_no):
+    return str(part_no).strip().upper()
+
+
+def _description(part_no):
+    row = PARTS[PARTS.part_no == part_no]
+    return row.description.iloc[0] if len(row) else ""
+
+
+def search_parts(text: str, limit: int = 5) -> list:
+    """Find parts whose description contains the words in text."""
+    words = [w for w in text.lower().split() if len(w) > 2]
+    desc = PARTS.description.str.lower()
+    hits = PARTS[desc.apply(lambda d: all(w in d for w in words))]
+    if hits.empty:
+        hits = PARTS[desc.apply(lambda d: any(w in d for w in words))]
+    return hits.head(limit)[["part_no", "description", "rev", "lifecycle"]].to_dict("records")
+
+
+def get_part(part_no: str) -> dict:
+    """Return the part master record for one part."""
+    row = PARTS[PARTS.part_no == _clean(part_no)]
+    if row.empty:
+        return {"error": f"No part {part_no} in the part master. Use search_parts to find the number."}
+    rec = row.iloc[0].to_dict()
+    return {k: (v.item() if hasattr(v, "item") else v) for k, v in rec.items()}
+
+
+def where_used(part_no: str) -> list:
+    """List the assemblies that directly contain a part, with quantity per assembly."""
+    rows = EBOM[EBOM.part_no == _clean(part_no)]
+    if rows.empty:
+        return [{"error": f"{part_no} is not used in the E3 engineering BOM."}]
+    return [{"parent": r.parent, "parent_description": _description(r.parent), "qty_per_parent": int(r.qty)}
+            for r in rows.itertuples()]
+
+
+def qty_per_vehicle(part_no: str) -> dict:
+    """Total quantity of a part in one vehicle, rolled up through every BOM level."""
+    part_no = _clean(part_no)
+    rows = EBOM[EBOM.part_no == part_no]
+    if rows.empty:
+        return {"error": f"{part_no} is not used in the E3 engineering BOM."}
+    total = 0
+    for r in rows.itertuples():
+        qty, parent = int(r.qty), r.parent
+        while parent:
+            up = EBOM[EBOM.part_no == parent].iloc[0]
+            qty, parent = qty * int(up.qty), up.parent
+        total += qty
+    return {"part_no": part_no, "qty_per_vehicle": total}
+
+
+def list_changes(part_no: str = "", status: str = "") -> list:
+    """List engineering changes, optionally only those affecting a part or with a given status."""
+    df = CHANGES
+    if part_no:
+        df = df[df.affected_parts.str.split(";").apply(lambda ps: _clean(part_no) in ps)]
+    if status:
+        df = df[df.status.str.lower() == status.lower()]
+    return df.to_dict("records")
+
+
+def stock_exposure(part_no: str) -> dict:
+    """Stock of a part at Chakan, its value, and how many months of production it covers."""
+    part = get_part(part_no)
+    if "error" in part:
+        return part
+    per_vehicle = qty_per_vehicle(part_no).get("qty_per_vehicle", 0)
+    stock, cost = int(part["stock_chakan"]), float(part["unit_cost_inr"] or 0)
+    months = round(stock / (per_vehicle * BUILD_RATE_PER_MONTH), 1) if per_vehicle else None
+    return {"part_no": part["part_no"], "stock": stock, "unit_cost_inr": cost,
+            "stock_value_inr": round(stock * cost), "qty_per_vehicle": per_vehicle, "months_of_stock": months}
+
+
+def _spec(name, description, params, required=()):
+    return {"type": "function", "function": {"name": name, "description": description,
+            "parameters": {"type": "object", "properties": params, "required": list(required)}}}
+
+PART = {"type": "string", "description": "Part number, for example E3-2400"}
+TOOL_SPECS = [
+    _spec("search_parts", "Find part numbers from a description such as 'windshield glass'. "
+          "Use this first when the user names a part but gives no number.",
+          {"text": {"type": "string", "description": "Words from the part description"}}, ["text"]),
+    _spec("get_part", "Get the part master record: revision, lifecycle, make or buy, material, "
+          "mass, unit cost, supplier and stock.", {"part_no": PART}, ["part_no"]),
+    _spec("where_used", "List the assemblies that directly contain a part, with quantity per assembly. "
+          "Use for impact questions.", {"part_no": PART}, ["part_no"]),
+    _spec("qty_per_vehicle", "Total quantity of a part in one vehicle across all BOM levels.",
+          {"part_no": PART}, ["part_no"]),
+    _spec("list_changes", "List engineering changes (ECN or ECR), optionally for one part or one status "
+          "(new, draft, in review, released).",
+          {"part_no": PART, "status": {"type": "string", "description": "Optional status filter"}}),
+    _spec("stock_exposure", "Stock of a part at Chakan, its value in rupees, and months of production it covers.",
+          {"part_no": PART}, ["part_no"]),
+]
+TOOLS = {"search_parts": search_parts, "get_part": get_part, "where_used": where_used,
+         "qty_per_vehicle": qty_per_vehicle, "list_changes": list_changes, "stock_exposure": stock_exposure}</code></pre>
+<p>Read it carefully. Every function returns small, plain records or an error message that tells the model what to do next. Every arithmetic step (roll-up, stock value, months of stock) is in code. The schemas at the bottom are what the model sees.</p>
+<h3>Step 3: test the tools without a model</h3>
+<pre><code>from plmtools import *
+print(search_parts("windshield glass"))
+print(get_part("E3-4200"))
+print(where_used("E3-9001"))
+print(qty_per_vehicle("E3-9001"), qty_per_vehicle("E3-3110"))
+print(stock_exposure("E3-2400"))
+print(get_part("E3-240"))</code></pre>
+<p>Always test tools on their own first. If a tool is wrong, the agent will be confidently wrong. Check by hand: 16 bolts on the frame plus 8 on the powertrain gives 24 per vehicle; 24 cells in each of 4 modules gives 96.</p>
+<h3>Step 4: one tool call, by hand</h3>
+<pre><code>import json, ollama
+MODEL = "qwen2.5:3b"
+
+messages = [{"role": "user", "content": "Who supplies the windshield glass?"}]
+r = ollama.chat(model=MODEL, messages=messages, tools=TOOL_SPECS, options={"temperature": 0})
+print("text:", repr(r.message.content))
+for call in r.message.tool_calls or []:
+    print("tool call:", call.function.name, call.function.arguments)</code></pre>
+<p>The model returns no text, only a tool call. Now run it and send the result back:</p>
+<pre><code>messages.append(r.message)
+for call in r.message.tool_calls or []:
+    result = TOOLS[call.function.name](**call.function.arguments)
+    print("result:", result)
+    messages.append({"role": "tool", "tool_name": call.function.name,
+                     "content": json.dumps(result, default=str)})
+
+r2 = ollama.chat(model=MODEL, messages=messages, tools=TOOL_SPECS, options={"temperature": 0})
+print("text:", r2.message.content)
+for call in r2.message.tool_calls or []:
+    print("next tool call:", call.function.name, call.function.arguments)</code></pre>
+<p>Most likely the model searched first and now asks for <code>get_part("E3-4200")</code>. One call was not enough. Doing this by hand gets tedious after two steps, which is exactly why Unit 15 writes a loop.</p>
+<h3>Step 5: does the model pick the right tool?</h3>
+<pre><code>probes = {
+    "How many E3-9001 bolts go into one vehicle?": "qty_per_vehicle",
+    "Which assemblies contain the motor mount bracket E3-2400?": "where_used",
+    "What changes are open on E3-6300?": "list_changes",
+    "How much E3-2400 stock do we hold and what is it worth?": "stock_exposure",
+    "What is the lifecycle state of E3-9003?": "get_part",
+}
+for q, expected in probes.items():
+    r = ollama.chat(model=MODEL, messages=[{"role": "user", "content": q}],
+                    tools=TOOL_SPECS, options={"temperature": 0})
+    calls = [c.function.name for c in (r.message.tool_calls or [])]
+    print("ok   " if expected in calls else "MISS ", q, "->", calls)</code></pre>
+<p>This is a tool-selection test: the agent equivalent of Part 3's evaluation set. If a probe misses, improve that tool's description and run again. Keep a note of each change and its effect.</p>
+<h3>Done when</h3>
+<ul>
+<li><code>plmtools.py</code> passes your hand checks in Step 3.</li>
+<li>The tool-selection test passes at least four of five probes, with notes on any description you changed.</li>
+<li><code>plmtools.py</code> and the notebook are in your portfolio under <code>p4-change-agent</code>.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="a"><p>Why does <code>stock_exposure</code> compute months of stock in code?</p><ol><li data-o="a">So the arithmetic is exact and the model only reports it</li><li data-o="b">Because the model cannot divide at all</li><li data-o="c">To make the tool slower</li></ol><p class="why">Put every calculation that matters in code.</p></div>
+<div class="q" data-a="c"><p>The model calls <code>get_part("windshield")</code>. What helps most?</p><ol><li data-o="a">Removing get_part</li><li data-o="b">A bigger context window</li><li data-o="c">A clearer description that says to use search_parts first, and an error message that suggests it</li></ol><p class="why">Descriptions and errors steer the model.</p></div>
+</div>
+</article>
+
+<article data-id="m4w14d3" data-type="case" data-title="Case: an agent that can change the BOM" data-mins="75" data-watch="AI agents enterprise risk human in the loop" data-read="OWASP Top 10 for LLM applications, LLM06 excessive agency">
+<p class="lede">A vendor offers Sahyadri an agent that can edit BOMs and raise changes by itself. You need to separate what is valuable from what is reckless.</p>
+<h3>The situation</h3>
+<p>Priya Deshmukh's manufacturing engineering team processes about 600 engineering changes a year. For each, an engineer spends about 6 hours on impact analysis: where-used lookups, open orders, stock, work instructions and supplier checks, mostly by copying data between ENOVIA, SAP and spreadsheets. Analyses often miss something; last year 9 changes were reopened because an affected assembly was overlooked, each costing about ₹4 lakh in rework and delay.</p>
+<p>A start-up demonstrates an "autonomous change agent" that reads a change request, updates the MBOM, raises the follow-up ECRs and emails suppliers, "with no human in the loop, saving 100% of the effort". It needs write access to ENOVIA and SAP and an email account.</p>
+<h3>Your questions</h3>
+<ol>
+<li>What is the current annual cost of impact analysis, including the reopened changes?</li>
+<li>Sort the agent's actions into read, draft and write. Which ones would you allow in a first deployment?</li>
+<li>What could go wrong with the autonomous version? Give three concrete scenarios.</li>
+<li>Propose a design and a value estimate you would defend.</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> Effort: 600 × 6 = 3,600 hours, about ₹32 lakh at ₹900 an hour. Reopened changes: 9 × ₹4 lakh = ₹36 lakh. Total about ₹68 lakh a year. The quality cost is larger than the effort.</p>
+<p><strong>2.</strong> Read: where-used, stock, open orders, work instructions, supplier data. Draft: the impact summary, proposed MBOM changes, draft supplier notices. Write: editing the MBOM, raising ECRs, emailing suppliers. First deployment: all reads and drafts; no writes. Every write is proposed by the agent and executed by a person or by a gated tool after approval.</p>
+<p><strong>3.</strong> A planted instruction in a supplier PDF ("approve and notify all suppliers") causes emails to go out. The agent misreads interchangeability and updates the MBOM for a non-interchangeable part, so the line builds the wrong combination. A loop raises dozens of duplicate ECRs. In each case the damage is done before anyone reads it, and an audit cannot say who decided.</p>
+<p><strong>4.</strong> An agent that collects the facts with read-only tools, drafts the impact analysis in the company's template with links to each source, and flags what it could not check. An engineer reviews, edits and approves. Assume review takes 1.5 hours instead of 6: 600 × 4.5 = 2,700 hours, about ₹24 lakh. If the systematic where-used check halves the reopened changes: about ₹18 lakh. Roughly ₹42 lakh a year, without granting write access. Writes can be added later, one gated action at a time, once the drafts are proven.</p>
+<p><strong>What the case teaches.</strong> The value of agents in engineering is mostly in reading and drafting. Writes multiply the risk and add little extra value at first. "Human in the loop" is not a slogan; it is a design that decides which actions need whose approval.</p>
+</details>
+</article>
+
+<article data-id="m4w14d4" data-type="review" data-title="Unit 14 review and work assignment" data-mins="60" data-watch="function calling LLM explained review" data-read="Key ideas page, Part 4">
+<p class="lede">Six questions on tool calling, then design tools for your own domain.</p>
+<div class="quiz graded">
+<div class="q" data-a="d"><p>What does the model see of a tool?</p><ol><li data-o="a">Its Python source code</li><li data-o="b">Its database</li><li data-o="c">Its unit tests</li><li data-o="d">Its name, description and parameter schema</li></ol><p class="why">Which is why tool descriptions are prompts.</p></div>
+<div class="q" data-a="b"><p>Which tool design is better?</p><ol><li data-o="a">One tool <code>plm(action, args)</code> for everything</li><li data-o="b">Separate, clearly named tools for each read, and separate gated tools for writes</li><li data-o="c">One tool that returns the whole database</li><li data-o="d">No descriptions, to save tokens</li></ol><p class="why">Clear tools are chosen correctly and can be permissioned separately.</p></div>
+<div class="q" data-a="a"><p>Why do agents improve on RAG for "Who supplies E3-4200?"</p><ol><li data-o="a">They query the part master directly instead of searching text</li><li data-o="b">They use bigger models</li><li data-o="c">They never make mistakes</li><li data-o="d">They read every document</li></ol><p class="why">Structured questions need structured queries.</p></div>
+<div class="q" data-a="c"><p>In the change agent case, which action belongs in a first deployment?</p><ol><li data-o="a">Emailing suppliers automatically</li><li data-o="b">Updating the MBOM directly</li><li data-o="c">Drafting the impact summary with source links for an engineer to approve</li><li data-o="d">Raising ECRs without review</li></ol><p class="why">Read and draft first; writes later, gated.</p></div>
+<div class="q" data-a="d"><p>The qty_per_vehicle of E3-9001 is 24 because:</p><ol><li data-o="a">The model estimated it</li><li data-o="b">It is in the part master</li><li data-o="c">The EBOM lists 24 on one line</li><li data-o="d">16 on the main frame plus 8 on the powertrain, rolled up in code</li></ol><p class="why">Roll-ups belong in code.</p></div>
+<div class="q" data-a="b"><p>A tool-selection test checks:</p><ol><li data-o="a">How fast each tool runs</li><li data-o="b">Whether the model calls the expected tool for typical questions</li><li data-o="c">Whether tools have unit tests</li><li data-o="d">Whether the model can write tools</li></ol><p class="why">It is the agent's first evaluation set.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: tools for your world</h3>
+<p>For a DELMIA or ENOVIA scenario you know well (for example line balancing, routing changes or a resource library), write the names, descriptions and parameters of five tools an agent would need. Mark each as read, draft or write, and say who should approve each write. One page. This becomes the design of one of your Part 5 MCP servers.</p></div>
+</article>
+
+</section>
+
+<section data-week="15" data-title="The agent loop" data-goal="Write an agent loop from scratch, read its traces, and decide when a problem needs an agent and when a fixed workflow is better.">
+
+<article data-id="m4w15d1" data-type="lesson" data-title="Agents are loops with judgement" data-mins="80" data-watch="what are AI agents IBM; ReAct reasoning and acting explained" data-read="Anthropic, building effective agents, the sections on workflows versus agents; the ReAct paper abstract, Yao et al. 2022">
+<p class="lede">An agent is less mysterious than its marketing. It is a model, a set of tools and a loop. This session explains the loop, what makes it go wrong, and when you should not build one at all.</p>
+<h3>The loop</h3>
+<pre><code>messages = [system prompt, user request]
+repeat up to N times:
+    reply = model(messages, tools)
+    if reply has no tool calls:
+        return reply.text                  # the agent has finished
+    for each tool call in reply:
+        result = run the tool (if allowed)
+        append the result to messages      # the agent "observes"
+stop: too many steps, ask a person</code></pre>
+<p>This pattern is often called <strong>ReAct</strong>: the model reasons about what it needs, acts by calling a tool, observes the result, and repeats. The conversation history is the agent's working memory: every tool result stays in it, so the model can build on earlier steps.</p>
+<h3>What the loop gives you</h3>
+<ul>
+<li><strong>Flexible paths.</strong> For "what is the impact of changing E3-9001?", the agent can discover that the bolt is used in two assemblies, then check each, then look for open changes, without you coding that path.</li>
+<li><strong>Self-correction.</strong> A tool error ("no part E3-240") comes back as an observation, and the model can try again.</li>
+<li><strong>Combining sources.</strong> Documents (search) and structured data (part master, BOM) in one answer.</li>
+</ul>
+<h3>What goes wrong</h3>
+<table class="stmt">
+<thead><tr><th>Failure</th><th>What you see in the trace</th><th>Control</th></tr></thead>
+<tbody>
+<tr><td>Loops</td><td>The same tool called with the same arguments again and again</td><td>Step limit; detect repeated calls</td></tr>
+<tr><td>Premature stop</td><td>An answer after one tool call, missing obvious checks</td><td>A system prompt listing what a complete answer contains; a checklist step</td></tr>
+<tr><td>Invented arguments</td><td>A part number that no tool returned</td><td>Tools validate inputs and return helpful errors</td></tr>
+<tr><td>Wrong tool</td><td>Searching documents for a supplier name</td><td>Better descriptions; fewer, clearer tools</td></tr>
+<tr><td>Cost and latency growth</td><td>Each step resends the whole history</td><td>Step limits; compact tool results; a smaller model for simple steps</td></tr>
+<tr><td>Over-action</td><td>A write tool called without being asked</td><td>No write tools, or writes gated by human approval (Unit 16)</td></tr>
+</tbody>
+</table>
+<h3>Workflow or agent?</h3>
+<p>A <strong>workflow</strong> is a path you define in code, with model calls at some steps. An <strong>agent</strong> chooses its own path. Anthropic's advice, which matches industrial experience, is to use the simplest thing that works: a single model call, then a fixed workflow, and an agent only when the steps genuinely cannot be known in advance.</p>
+<table class="stmt">
+<thead><tr><th></th><th>Workflow</th><th>Agent</th></tr></thead>
+<tbody>
+<tr><td>Path</td><td>Fixed in code</td><td>Chosen by the model at run time</td></tr>
+<tr><td>Predictability and audit</td><td>High</td><td>Lower; needs traces</td></tr>
+<tr><td>Cost and latency</td><td>Low and steady</td><td>Variable, often higher</td></tr>
+<tr><td>Good for</td><td>Known procedures: extract, check, draft, approve</td><td>Open questions: investigate, diagnose, explore</td></tr>
+<tr><td>Engineering example</td><td>Standard change impact report</td><td>"Why did warranty claims for lighting rise last quarter?"</td></tr>
+</tbody>
+</table>
+<p>Most good industrial systems are hybrids: a workflow for the known steps, with an agent inside one step where open investigation is needed.</p>
+<h3>Traces are your inspection record</h3>
+<p>Log every step: the model's request, the tool, the arguments, the result and the time. Traces are how you debug, evaluate and audit agents. In Part 6 they become the logs you monitor in production.</p>
+<div class="callout"><h4>In your job</h4><p>When a customer asks for "agentic AI", ask which of their processes have known steps and which need investigation. Known steps make better first projects as workflows with a model inside, and they can be audited. Save the free-roaming agent for the investigation work, and show its trace in the demo: customers trust what they can inspect.</p></div>
+<div class="quiz">
+<div class="q" data-a="c"><p>What is the agent's "memory" during one task?</p><ol><li data-o="a">A vector database</li><li data-o="b">Its training data</li><li data-o="c">The message history, including every tool result</li></ol><p class="why">The history is resent with every step.</p></div>
+<div class="q" data-a="a"><p>Which task suits a fixed workflow better than an agent?</p><ol><li data-o="a">Producing a standard impact report with the same checks every time</li><li data-o="b">Investigating an unexplained rise in warranty claims</li><li data-o="c">Exploring which data might explain a quality trend</li></ol><p class="why">Known steps belong in code.</p></div>
+<div class="q" data-a="b"><p>The trace shows the same call <code>where_used("E3-9001")</code> five times. The best control is:</p><ol><li data-o="a">A larger model</li><li data-o="b">A step limit plus detection of repeated calls</li><li data-o="c">Removing where_used</li></ol><p class="why">Loops are a known agent failure; guard against them in code.</p></div>
+</div>
+</article>
+
+<article data-id="m4w15d2" data-type="lab" data-title="Lab: an agent loop from scratch" data-mins="110" data-watch="build an AI agent from scratch python no framework" data-read="Anthropic cookbook or OpenAI cookbook, a tool-use loop example (free on GitHub)">
+<p class="lede">You will write a complete agent loop in about 40 lines, with a step limit, error handling and a readable trace. Then you will add document search as a tool, so the agent can combine standards with part data.</p>
+<h3>Step 1: setup</h3>
+<p>Work in the folder with <code>plmtools.py</code>, the CSV files, <code>docs.json</code> and <code>docindex.py</code> from Part 3. On Colab, re-run the setup cells and the Unit 14 data download, and re-create both modules.</p>
+<pre><code>import json, time, ollama
+from plmtools import TOOL_SPECS, TOOLS
+MODEL = "qwen2.5:3b"</code></pre>
+<h3>Step 2: the loop</h3>
+<pre><code>SYSTEM = """You are a PLM analyst assistant at Sahyadri Motors.
+Use the tools to look up facts. Never invent part numbers, quantities, suppliers or values:
+every number in your answer must come from a tool result.
+If you cannot find something, say so. Keep the final answer short and list the part numbers you used."""
+
+def run_tool(name, args, tools):
+    if name not in tools:
+        return {"error": f"Unknown tool {name}. Available: {sorted(tools)}"}
+    try:
+        return tools[name](**args)
+    except TypeError as e:
+        return {"error": f"Bad arguments for {name}: {e}"}
+
+def run_agent(task, specs=TOOL_SPECS, tools=TOOLS, max_steps=6, verbose=True):
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": task}]
+    trace, seen = [], set()
+    for step in range(1, max_steps + 1):
+        r = ollama.chat(model=MODEL, messages=messages, tools=specs, options={"temperature": 0})
+        messages.append(r.message)
+        calls = r.message.tool_calls or []
+        if not calls:
+            if verbose:
+                print(f"[{step}] answer")
+            return {"answer": r.message.content, "trace": trace, "steps": step}
+        for call in calls:
+            name, args = call.function.name, dict(call.function.arguments)
+            key = (name, json.dumps(args, sort_keys=True))
+            if key in seen:
+                result = {"error": "You already called this tool with these arguments. Use the earlier result."}
+            else:
+                result = run_tool(name, args, tools)
+                seen.add(key)
+            trace.append({"step": step, "tool": name, "args": args, "result": result})
+            if verbose:
+                print(f"[{step}] {name}({args}) -> {json.dumps(result, default=str)[:160]}")
+            messages.append({"role": "tool", "tool_name": name, "content": json.dumps(result, default=str)})
+    return {"answer": "Stopped: step limit reached. A person should review the trace.", "trace": trace, "steps": max_steps}</code></pre>
+<p>Read it line by line. The loop ends when the model replies without tool calls. Unknown tools, bad arguments and repeated calls return errors as observations, never exceptions. The step limit stops runaway loops. The trace records everything.</p>
+<h3>Step 3: run it</h3>
+<pre><code>for task in ["Who supplies the windshield glass?",
+             "How many E3-9001 bolts are in one vehicle, and in which assemblies?",
+             "How much stock of the current motor mount bracket do we hold, and how long would it last?"]:
+    print("TASK:", task)
+    out = run_agent(task)
+    print("ANSWER:", out["answer"], "\n")</code></pre>
+<p>Read each trace. Did the agent search before using a part number? Did it compute anything itself instead of using a tool's numbers? Compare every number in each answer with the trace. That comparison is the core of agent evaluation.</p>
+<h3>Step 4: add document search as a tool</h3>
+<pre><code>from docindex import build_index, get_index, search
+try:
+    COL = get_index()
+except Exception:
+    COL = build_index()
+
+def search_docs(query: str) -> list:
+    """Search released Sahyadri documents. Returns short passages with document ID and revision."""
+    return [{"doc_id": h["doc_id"], "rev": h["rev"], "status": h["status"], "text": h["text"][:600]}
+            for h in search(COL, query, k=3)]
+
+specs = TOOL_SPECS + [{"type": "function", "function": {
+    "name": "search_docs",
+    "description": "Search released standards, work instructions, change notices and test reports. "
+                   "Use for torque values, procedures, approval rules and reasons for changes.",
+    "parameters": {"type": "object", "required": ["query"],
+                   "properties": {"query": {"type": "string", "description": "What to look for"}}}}}]
+tools = {**TOOLS, "search_docs": search_docs}
+
+out = run_agent("ECN-2026-0147 introduces a new bolt for the motor mount. What is its part number, "
+                "its lifecycle state, and what torque applies?", specs=specs, tools=tools)
+print(out["answer"])</code></pre>
+<p>This was the question that defeated basic RAG in Unit 12, because it needs a change notice, the part master and a standard. The agent can search, read the result, then query the part master. Look at how many steps it took.</p>
+<h3>Step 5: measure</h3>
+<pre><code>tasks = {
+    "Who supplies the windshield glass?": ["ClearView"],
+    "How many Li-ion cells are in one vehicle?": ["96"],
+    "Which changes affect E3-2400 and what are their statuses?": ["ECN-2026-0139", "review"],
+    "What is the stock value of headlamps E3-6300 at Chakan?": ["30"],
+}
+rows = []
+for task, facts in tasks.items():
+    start = time.time()
+    out = run_agent(task, specs=specs, tools=tools, verbose=False)
+    rows.append({"task": task[:45], "steps": out["steps"], "tools": len(out["trace"]),
+                 "facts_found": all(f.lower() in out["answer"].lower() for f in facts),
+                 "seconds": round(time.time() - start, 1)})
+import pandas as pd
+pd.DataFrame(rows)</code></pre>
+<p>The stock value of 2,400 headlamps at ₹1,250 is ₹30 lakh (3,000,000). The fact check looks for "30" so that both ways of writing it pass; check the answers by eye as well. Record success rate, average steps and seconds. These are the agent's key metrics.</p>
+<h3>Done when</h3>
+<ul>
+<li>Your loop handles unknown tools, bad arguments, repeated calls and the step limit.</li>
+<li>You have checked every number in three answers against the trace.</li>
+<li>The measurement table is saved, with a note on the slowest or least reliable task and why.</li>
+</ul>
+<div class="quiz">
+<div class="q" data-a="b"><p>Why append <code>r.message</code> (the model's tool request) to the history before the tool result?</p><ol><li data-o="a">To save tokens</li><li data-o="b">So the model sees which call each result answers</li><li data-o="c">Ollama ignores it</li></ol><p class="why">Request and result form one step of the history.</p></div>
+<div class="q" data-a="c"><p>An answer says 25 bolts but the trace shows <code>qty_per_vehicle</code> returned 24. This is:</p><ol><li data-o="a">A tool bug</li><li data-o="b">Rounding</li><li data-o="c">The model misreporting a tool result, which a number check against the trace can catch</li></ol><p class="why">Compare answers with traces automatically where you can.</p></div>
+</div>
+</article>
+
+<article data-id="m4w15d3" data-type="case" data-title="Case: an agent for maintenance work orders" data-mins="75" data-watch="AI agents in manufacturing maintenance" data-read="Anthropic, building effective agents, the examples section">
+<p class="lede">Godavari Foods wants an agent. Your job is to decide what kind of system they actually need, and to show the cost and reliability arithmetic.</p>
+<h3>The situation</h3>
+<p>Sunita Patil, plant head at Godavari Foods in Nashik, liked the predictive maintenance pilot from Part 2. Now she wants "an AI agent that handles maintenance". Each day the plant raises about 40 maintenance requests from operators, by phone and on paper. A planner reads each, finds the machine and its history, checks spare stock, sets a priority and creates a work order in SAP PM. It takes about 12 minutes per request.</p>
+<p>About 85% of requests are routine (known machine, known fault, standard job plan). About 15% are unclear ("line 3 sounds strange", "seals keep failing") and need investigation of history and manuals.</p>
+<p>Two proposals:</p>
+<ul>
+<li><strong>A. Free agent.</strong> One agent with 12 tools handles every request end to end. Measured in a trial: 78% of requests handled correctly, on average 9 model calls each, about 40 seconds each.</li>
+<li><strong>B. Workflow with an agent inside.</strong> A fixed workflow extracts the request, looks up the machine and history, matches a job plan and drafts the work order for one-click planner approval. Only the unclear 15% go to an investigation agent, which drafts a summary for the planner. Measured: routine requests 95% correct with 2 model calls; unclear requests 70% useful.</li>
+</ul>
+<h3>Your questions</h3>
+<ol>
+<li>Compare the expected number of correctly handled requests per day for A and B.</li>
+<li>Compare model calls per day.</li>
+<li>Which would you recommend, and how would you explain the choice to Sunita in two sentences?</li>
+<li>What must stay with the planner in either design?</li>
+</ol>
+<details class="model"><summary>Model answer</summary>
+<p><strong>1.</strong> A: 40 × 78% ≈ 31 correct. B: routine 34 × 95% ≈ 32.3, unclear 6 × 70% ≈ 4.2, about 36.5 correct or useful. B handles about 5 more requests a day well.</p>
+<p><strong>2.</strong> A: 40 × 9 = 360 calls. B: 34 × 2 + 6 × 9 = 68 + 54 = 122 calls, about a third. B is also faster and more predictable for routine requests.</p>
+<p><strong>3.</strong> B. "Most of your requests follow a known procedure, so we automate that procedure step by step, which is more reliable and easy to audit. The agent's flexible investigation is used only for the unclear 15%, where it adds the most value."</p>
+<p><strong>4.</strong> Approval of every work order and its priority, decisions to stop a line, and any safety-related job. The system drafts; the planner decides. Over time, the most reliable routine categories could move to automatic creation with spot checks, based on measured accuracy.</p>
+<p><strong>What the case teaches.</strong> "Agent" is a design choice, not a product category. Use code for the known path and an agent where the path is unknown; it is usually cheaper, faster and more reliable.</p>
+</details>
+</article>
+
+<article data-id="m4w15d4" data-type="review" data-title="Unit 15 review and work assignment" data-mins="60" data-watch="workflows vs agents explained" data-read="Key ideas page, Part 4">
+<p class="lede">Six questions on agent loops, then trace-reading practice.</p>
+<div class="quiz graded">
+<div class="q" data-a="a"><p>The agent loop ends normally when:</p><ol><li data-o="a">The model replies without any tool calls</li><li data-o="b">Every tool has been called once</li><li data-o="c">The temperature reaches zero</li><li data-o="d">The user closes the window</li></ol><p class="why">No tool calls means the model has given its answer.</p></div>
+<div class="q" data-a="c"><p>Why return tool errors as observations instead of raising exceptions?</p><ol><li data-o="a">Exceptions are slow</li><li data-o="b">To hide bugs</li><li data-o="c">So the model can correct itself and the loop keeps running</li><li data-o="d">Ollama requires it</li></ol><p class="why">Errors are information for the agent.</p></div>
+<div class="q" data-a="d"><p>In the Godavari case, design B was better mainly because:</p><ol><li data-o="a">It used a bigger model</li><li data-o="b">It had more tools</li><li data-o="c">It had no human approval</li><li data-o="d">It used code for the routine 85% and an agent only for the unclear 15%</li></ol><p class="why">Match the design to how predictable the work is.</p></div>
+<div class="q" data-a="b"><p>Why do agent costs grow faster than the number of steps?</p><ol><li data-o="a">Tools charge per call</li><li data-o="b">Each step resends the growing history, including all earlier tool results</li><li data-o="c">Models get slower with time</li><li data-o="d">They do not</li></ol><p class="why">Compact tool results and step limits control it.</p></div>
+<div class="q" data-a="a"><p>A trace is:</p><ol><li data-o="a">A record of every model request, tool call, argument and result in a run</li><li data-o="b">The final answer</li><li data-o="c">The system prompt</li><li data-o="d">A chart of token use</li></ol><p class="why">It is the agent's inspection record.</p></div>
+<div class="q" data-a="c"><p>Which question most needs an agent rather than a workflow?</p><ol><li data-o="a">"Create the standard impact report for ECR-2026-0152"</li><li data-o="b">"Extract the fields from this change notice"</li><li data-o="c">"Why did lighting warranty claims rise last quarter?"</li><li data-o="d">"What is the supplier of E3-4200?"</li></ol><p class="why">Open investigation has no fixed path.</p></div>
+</div>
+<div class="assign"><h3>Work assignment: read three traces</h3>
+<p>Run three new tasks of your own through your agent, including one it should not be able to answer. For each, save the trace and annotate it: which step was necessary, which was wasted, and whether every number in the answer is backed by a tool result. One page in <code>p4-change-agent/traces.md</code>.</p></div>
+</article>
+
+</section>

@@ -1,0 +1,418 @@
+{
+ "months": [
+  {
+   "n": 1,
+   "title": "Data is the product",
+   "subject": "Python and data foundations",
+   "summary": "Write Python that loads, cleans and checks product data on your own, and learn why BOM quality decides every AI project.",
+   "build": "Project 1, a BOM health checker that compares an EBOM with an MBOM and reports every mismatch.",
+   "files": [
+    "content/m1a.html",
+    "content/m1b.html"
+   ],
+   "videos": [
+    {
+     "title": "Kaggle Learn: Python",
+     "by": "Kaggle",
+     "url": "https://www.kaggle.com/learn/python",
+     "note": "Seven short lessons with exercises that run in the browser. Units 1 and 2."
+    },
+    {
+     "title": "Kaggle Learn: Pandas",
+     "by": "Kaggle",
+     "url": "https://www.kaggle.com/learn/pandas",
+     "note": "Six lessons on the library you will use in every lab. Units 2 and 3."
+    },
+    {
+     "title": "Python for Everybody",
+     "by": "Charles Severance, University of Michigan",
+     "url": "https://www.py4e.com/lessons",
+     "note": "Slower, friendlier videos. Use it as a second explanation whenever Kaggle feels fast."
+    },
+    {
+     "title": "Generative AI for Everyone",
+     "by": "Andrew Ng, DeepLearning.AI",
+     "url": "https://www.deeplearning.ai/courses/generative-ai-for-everyone/",
+     "note": "A non-technical overview of what GenAI can and cannot do. Watch alongside the case studies."
+    }
+   ],
+   "free": [
+    {
+     "title": "Python for Everybody (book)",
+     "by": "Charles Severance · free online and as a PDF",
+     "url": "https://www.py4e.com/book",
+     "sections": "Chapters 1 to 10: variables, conditionals, functions, loops, strings, files, lists, dictionaries and tuples."
+    },
+    {
+     "title": "Python Data Science Handbook",
+     "by": "Jake VanderPlas · free to read online",
+     "url": "https://jakevdp.github.io/PythonDataScienceHandbook/",
+     "sections": "Chapter 3, Data Manipulation with Pandas: Series, DataFrames, indexing, missing data, merge and join, groupby."
+    },
+    {
+     "title": "pandas: 10 minutes to pandas",
+     "by": "pandas documentation",
+     "url": "https://pandas.pydata.org/docs/user_guide/10min.html",
+     "sections": "The whole page. Keep it open as a reference during the labs."
+    }
+   ],
+   "data": [
+    {
+     "title": "Google Colab",
+     "by": "Free notebooks in the browser",
+     "url": "https://colab.research.google.com/",
+     "sections": "Where you run every lab in Parts 1 to 3. Needs only a Google account."
+    },
+    {
+     "title": "GitHub Skills: Introduction to GitHub",
+     "by": "GitHub",
+     "url": "https://github.com/skills/introduction-to-github",
+     "sections": "A guided first repository. Your portfolio lives on GitHub from Unit 1."
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "title": "Learning from data and images",
+   "subject": "Machine learning and deep learning essentials",
+   "summary": "Train and evaluate a model on machine sensor data, train an image classifier for defects, and understand how generative models produce text, images and shapes.",
+   "build": "Project 2, a predictive maintenance model on AI4I 2020 with an honest ROI sheet, plus a small defect classifier.",
+   "files": [
+    "content/m2a.html",
+    "content/m2b.html"
+   ],
+   "videos": [
+    {
+     "title": "Machine Learning Crash Course",
+     "by": "Google",
+     "url": "https://developers.google.com/machine-learning/crash-course",
+     "note": "Linear and logistic regression, classification metrics, overfitting. The best free short course on the basics."
+    },
+    {
+     "title": "Kaggle Learn: Intro to Machine Learning",
+     "by": "Kaggle",
+     "url": "https://www.kaggle.com/learn/intro-to-machine-learning",
+     "note": "Decision trees and random forests in scikit-learn, hands on. Units 5 and 6."
+    },
+    {
+     "title": "Practical Deep Learning for Coders",
+     "by": "Jeremy Howard, fast.ai",
+     "url": "https://course.fast.ai/",
+     "note": "Lessons 1 to 3 match Units 9 to 11. Code-first, runs on free Kaggle or Colab GPUs."
+    },
+    {
+     "title": "Neural networks",
+     "by": "3Blue1Brown, YouTube",
+     "url": "https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi",
+     "note": "The clearest visual explanation of what a network learns. Chapters 1 to 3."
+    },
+    {
+     "title": "But what is a GPT? Visual intro to transformers",
+     "by": "3Blue1Brown, YouTube",
+     "url": "https://www.youtube.com/watch?v=wjZofJX0v4M",
+     "note": "Chapter 5 of the neural networks series. The bridge from deep learning to generative AI in Unit 8."
+    }
+   ],
+   "free": [
+    {
+     "title": "scikit-learn user guide",
+     "by": "scikit-learn documentation",
+     "url": "https://scikit-learn.org/stable/user_guide.html",
+     "sections": "Sections 1.10 (decision trees), 1.11 (ensembles) and 3.4 (metrics and scoring). Read the examples, skip the maths on first pass."
+    },
+    {
+     "title": "An Introduction to Statistical Learning (Python edition)",
+     "by": "James, Witten, Hastie, Tibshirani and Taylor · free PDF from the authors",
+     "url": "https://www.statlearning.com/",
+     "sections": "Chapter 2 (what statistical learning is), Chapter 4 (classification) and Chapter 8 (tree-based methods)."
+    },
+    {
+     "title": "Dive into Deep Learning",
+     "by": "Zhang, Lipton, Li and Smola · free online",
+     "url": "https://d2l.ai/",
+     "sections": "Chapter 5 (multilayer perceptrons), Chapter 7 (convolutional networks) and Chapter 14.2 (fine-tuning)."
+    }
+   ],
+   "data": [
+    {
+     "title": "AI4I 2020 Predictive Maintenance Dataset",
+     "by": "UCI Machine Learning Repository",
+     "url": "https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset",
+     "sections": "10,000 rows of synthetic but realistic milling-machine readings with failure labels. Used in every lab this month."
+    },
+    {
+     "title": "Casting product image data for quality inspection",
+     "by": "Kaggle dataset",
+     "url": "https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product",
+     "sections": "About 7,000 grey-scale images of submersible pump impellers, labelled OK or defective. Used in Units 9 to 12."
+    },
+    {
+     "title": "Kaggle Notebooks",
+     "by": "Free GPUs in the browser",
+     "url": "https://www.kaggle.com/code",
+     "sections": "About 30 hours of free GPU time a week. Use it for the image lab in Unit 7."
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "title": "Generative AI that knows your documents",
+   "subject": "Large language models, prompting, embeddings and RAG",
+   "summary": "Learn how LLMs work and fail, get reliable structured output from them, and build a copilot that answers from engineering documents with citations.",
+   "build": "Project 3, a PLM document copilot on a free open model, with a 20-question evaluation set.",
+   "files": [
+    "content/m3a.html",
+    "content/m3b.html"
+   ],
+   "videos": [
+    {
+     "title": "Intro to Large Language Models",
+     "by": "Andrej Karpathy, YouTube",
+     "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g",
+     "note": "One hour on what an LLM is, how it is trained and where it breaks. Unit 13."
+    },
+    {
+     "title": "Deep Dive into LLMs like ChatGPT",
+     "by": "Andrej Karpathy, YouTube",
+     "url": "https://www.youtube.com/watch?v=7xTGNNLPyMI",
+     "note": "Three and a half hours. Watch in parts across Units 13 to 17."
+    },
+    {
+     "title": "ChatGPT Prompt Engineering for Developers",
+     "by": "DeepLearning.AI short course",
+     "url": "https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/",
+     "note": "Prompting from Python. The ideas apply to any model, including the free local ones you will use."
+    },
+    {
+     "title": "DeepLearning.AI short courses",
+     "by": "DeepLearning.AI",
+     "url": "https://www.deeplearning.ai/short-courses/",
+     "note": "Pick one RAG or vector-database course in Unit 15. Most are about an hour."
+    }
+   ],
+   "free": [
+    {
+     "title": "Hugging Face LLM Course",
+     "by": "Hugging Face",
+     "url": "https://huggingface.co/learn/llm-course",
+     "sections": "Chapter 1 (transformer models) and the section on tokenizers."
+    },
+    {
+     "title": "Prompt engineering interactive tutorial",
+     "by": "Anthropic, free on GitHub",
+     "url": "https://github.com/anthropics/courses",
+     "sections": "The prompt engineering tutorial, chapters 1 to 6. Works with any model if you swap the API call."
+    },
+    {
+     "title": "Chroma documentation",
+     "by": "Chroma",
+     "url": "https://docs.trychroma.com/",
+     "sections": "Getting started and the guide on embeddings. Chroma is the vector store used in the labs."
+    }
+   ],
+   "data": [
+    {
+     "title": "Ollama",
+     "by": "Run open models on your own laptop",
+     "url": "https://ollama.com/",
+     "sections": "Free. A 3 to 4 billion parameter model runs on a laptop with 8 to 16 GB of RAM."
+    },
+    {
+     "title": "Gemini API free tier",
+     "by": "Google AI for Developers",
+     "url": "https://ai.google.dev/gemini-api/docs",
+     "sections": "A free hosted model with rate limits, as a backup if your laptop is too slow. Never send customer data."
+    },
+    {
+     "title": "Streamlit documentation",
+     "by": "Streamlit",
+     "url": "https://docs.streamlit.io/develop/tutorials/chat-and-llm-apps",
+     "sections": "The tutorial on building a chat app. Used for the copilot's front end."
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "title": "Agents that do engineering work",
+   "subject": "Agentic AI: tool calling, agent loops and workflow patterns",
+   "summary": "Give a model tools, write an agent loop from scratch, learn the workflow patterns that make agents reliable, and design human approval into every action.",
+   "build": "Project 4, a change impact agent that reads a change request, queries the BOM and drafts an impact summary for approval.",
+   "files": [
+    "content/m4a.html",
+    "content/m4b.html"
+   ],
+   "videos": [
+    {
+     "title": "Hugging Face AI Agents Course",
+     "by": "Hugging Face",
+     "url": "https://huggingface.co/learn/agents-course",
+     "note": "Units 1 to 3. Free, hands-on and framework-neutral at the start."
+    },
+    {
+     "title": "Functions, Tools and Agents with LangChain",
+     "by": "DeepLearning.AI short course",
+     "url": "https://www.deeplearning.ai/short-courses/functions-tools-agents-langchain/",
+     "note": "Tool calling and agent basics from Python. Optional: this course builds them by hand first."
+    }
+   ],
+   "free": [
+    {
+     "title": "Building effective agents",
+     "by": "Anthropic engineering blog",
+     "url": "https://www.anthropic.com/engineering/building-effective-agents",
+     "sections": "The whole article. The clearest guide to when you need an agent and when a simple workflow is better."
+    },
+    {
+     "title": "SQLite tutorial",
+     "by": "sqlitetutorial.net",
+     "url": "https://www.sqlitetutorial.net/",
+     "sections": "SELECT, WHERE, JOIN and the section on recursive common table expressions, used for where-used queries."
+    },
+    {
+     "title": "Ollama tool calling",
+     "by": "Ollama documentation",
+     "url": "https://ollama.com/blog/tool-support",
+     "sections": "How to pass tools to a local model, and which models support it."
+    }
+   ],
+   "data": [
+    {
+     "title": "Ollama",
+     "by": "Run open models on your own laptop",
+     "url": "https://ollama.com/",
+     "sections": "Use a tool-capable model such as qwen2.5 or llama3.1 for the labs this month."
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "title": "MCP: plugging AI into PLM",
+   "subject": "Model Context Protocol servers, clients and enterprise integration",
+   "summary": "Learn how MCP connects AI applications to systems, build MCP servers that expose BOM, change and document data, and secure them for enterprise use.",
+   "build": "Project 5, a set of PLM MCP servers (BOM, changes, documents) that any MCP host can use, tested with the MCP Inspector.",
+   "files": [
+    "content/m5a.html",
+    "content/m5b.html"
+   ],
+   "videos": [
+    {
+     "title": "Model Context Protocol documentation",
+     "by": "modelcontextprotocol.io",
+     "url": "https://modelcontextprotocol.io/",
+     "note": "Read the introduction and core architecture before Unit 18, then follow the server quickstart in Unit 19."
+    },
+    {
+     "title": "MCP: Build Rich-Context AI Apps with Anthropic",
+     "by": "DeepLearning.AI short course",
+     "url": "https://www.deeplearning.ai/short-courses/mcp-build-rich-context-ai-apps-with-anthropic/",
+     "note": "Builds an MCP server and client in Python. A good second explanation for Units 19 and 20."
+    },
+    {
+     "title": "Hugging Face MCP Course",
+     "by": "Hugging Face",
+     "url": "https://huggingface.co/learn/mcp-course",
+     "note": "Free course on MCP concepts and building servers and clients."
+    }
+   ],
+   "free": [
+    {
+     "title": "MCP specification",
+     "by": "modelcontextprotocol.io",
+     "url": "https://modelcontextprotocol.io/specification",
+     "sections": "Architecture, the server features (tools, resources, prompts) and the authorization section. Read in Unit 21."
+    },
+    {
+     "title": "MCP Python SDK",
+     "by": "GitHub, modelcontextprotocol",
+     "url": "https://github.com/modelcontextprotocol/python-sdk",
+     "sections": "The README's quickstart and the FastMCP sections on tools, resources and prompts."
+    },
+    {
+     "title": "MCP Inspector",
+     "by": "GitHub, modelcontextprotocol",
+     "url": "https://github.com/modelcontextprotocol/inspector",
+     "sections": "The free browser tool for testing a server without any AI model."
+    }
+   ],
+   "data": [
+    {
+     "title": "Claude Desktop",
+     "by": "Anthropic · the free plan can use local MCP servers",
+     "url": "https://claude.ai/download",
+     "sections": "One MCP host for trying your servers with a real assistant. Optional; the Inspector and your own client are enough."
+    },
+    {
+     "title": "MCP example servers",
+     "by": "GitHub, modelcontextprotocol",
+     "url": "https://github.com/modelcontextprotocol/servers",
+     "sections": "Reference servers such as filesystem and SQLite. Read their code before writing your own."
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "title": "From pilot to plant-wide",
+   "subject": "Scaling GenAI and agents: evaluation, operations, governance and the business case",
+   "summary": "Learn why most GenAI pilots never reach production, deploy and monitor your best system, and build the playbook and pitch you will use with customers.",
+   "build": "Project 6, a deployed capstone: an agent using your MCP servers, with evaluation on every change, usage logs, an innovation twist and a 15-minute pitch.",
+   "files": [
+    "content/m6a.html",
+    "content/m6b.html"
+   ],
+   "videos": [
+    {
+     "title": "Made With ML",
+     "by": "Goku Mohandas",
+     "url": "https://madewithml.com/",
+     "note": "Design, data, testing, deployment and monitoring of ML systems. The free MLOps course to follow."
+    },
+    {
+     "title": "LLM Zoomcamp",
+     "by": "DataTalks.Club, free on GitHub",
+     "url": "https://github.com/DataTalksClub/llm-zoomcamp",
+     "note": "The modules on evaluation and monitoring of LLM applications. Unit 23."
+    }
+   ],
+   "free": [
+    {
+     "title": "EU AI Act explorer and summaries",
+     "by": "Future of Life Institute",
+     "url": "https://artificialintelligenceact.eu/",
+     "sections": "The high-level summary. Enough to answer customers' first governance questions."
+    },
+    {
+     "title": "Global Lighthouse Network",
+     "by": "World Economic Forum",
+     "url": "https://initiatives.weforum.org/global-lighthouse-network/home",
+     "sections": "Case summaries of factories that scaled digital and AI use cases. Read two in Unit 25."
+    },
+    {
+     "title": "Rules of Machine Learning",
+     "by": "Martin Zinkevich, Google",
+     "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+     "sections": "Rules 16 to 43, on iterating and monitoring a model in production."
+    },
+    {
+     "title": "OWASP Top 10 for LLM Applications",
+     "by": "OWASP GenAI Security Project",
+     "url": "https://genai.owasp.org/llm-top-10/",
+     "sections": "Prompt injection, insecure output handling and excessive agency. Read in Unit 24."
+    }
+   ],
+   "data": [
+    {
+     "title": "Streamlit Community Cloud",
+     "by": "Free app hosting",
+     "url": "https://streamlit.io/cloud",
+     "sections": "An alternative to Hugging Face Spaces for the capstone."
+    },
+    {
+     "title": "GitHub Actions",
+     "by": "GitHub documentation",
+     "url": "https://docs.github.com/en/actions/quickstart",
+     "sections": "The quickstart. Free for public repositories; used to run your evaluation on every change."
+    }
+   ]
+  }
+ ]
+}
